@@ -22,20 +22,20 @@ elms.forEach(function(elm) {
 var Radio = function(stations) {
   var self = this;
 
-  self.stations = stations;
-  self.index = 0;
+  this.stations = stations;
+  this.index = 0;
   
   // Setup the display for each station.
-  for (var i=0; i<self.stations.length; i++) {
-    window['title' + i].innerHTML = '<b>' + self.stations[i].freq + '</b> ' + self.stations[i].title;
+  for (var i=0; i<this.stations.length; i++) {
+    window['title' + i].innerHTML = '<b>' + this.stations[i].freq + '</b> ' + this.stations[i].title;
     window['station' + i].addEventListener('click', function(index) {
-      var isNotPlaying = (self.stations[index].howl && !self.stations[index].howl.playing());
+      var isNotPlaying = (this.stations[index].howl && !this.stations[index].howl.playing());
       
       // Stop other sounds or the current one.
       radio.stop();
 
       // If the station isn't already playing or it doesn't exist, play it.
-      if (isNotPlaying || !self.stations[index].howl) {
+      if (isNotPlaying || !this.stations[index].howl) {
         radio.play(index);
       }
     }.bind(self, i));
@@ -50,8 +50,8 @@ Radio.prototype = {
     var self = this;
     var sound;
 
-    index = typeof index === 'number' ? index : self.index;
-    var data = self.stations[index];
+    index = typeof index === 'number' ? index : this.index;
+    var data = this.stations[index];
 
     // If we already loaded this track, use the current one.
     // Otherwise, setup and load a new Howl.
@@ -69,10 +69,10 @@ Radio.prototype = {
     sound.play();
 
     // Toggle the display.
-    self.toggleStationDisplay(index, true);
+    this.toggleStationDisplay(index, true);
 
     // Keep track of the index we are currently playing.
-    self.index = index;
+    this.index = index;
   },
 
   /**
@@ -82,10 +82,10 @@ Radio.prototype = {
     var self = this;
 
     // Get the Howl we want to manipulate.
-    var sound = self.stations[self.index].howl;
+    var sound = this.stations[this.index].howl;
 
     // Toggle the display.
-    self.toggleStationDisplay(self.index, false);
+    this.toggleStationDisplay(this.index, false);
 
     // Stop the sound.
     if (sound) {

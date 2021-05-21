@@ -21,29 +21,29 @@ elms.forEach(function(elm) {
 var Sprite = function(options) {
   var self = this;
 
-  self.sounds = [];
+  this.sounds = [];
 
   // Setup the options to define this sprite display.
-  self._width = options.width;
-  self._left = options.left;
-  self._spriteMap = options.spriteMap;
-  self._sprite = options.sprite;
-  self.setupListeners();
+  this._width = options.width;
+  this._left = options.left;
+  this._spriteMap = options.spriteMap;
+  this._sprite = options.sprite;
+  this.setupListeners();
 
   // Create our audio sprite definition.
-  self.sound = new Howl({
+  this.sound = new Howl({
     src: options.src,
     sprite: options.sprite
   });
 
   // Setup a resize event and fire it to setup our sprite overlays.
   window.addEventListener('resize', function() {
-    self.resize();
+    this.resize();
   }, false);
-  self.resize();
+  this.resize();
 
   // Begin the progress step tick.
-  requestAnimationFrame(self.step.bind(self));
+  requestAnimationFrame(this.step.bind(self));
 };
 Sprite.prototype = {
   /**
@@ -51,11 +51,11 @@ Sprite.prototype = {
    */
   setupListeners: function() {
     var self = this;
-    var keys = Object.keys(self._spriteMap);
+    var keys = Object.keys(this._spriteMap);
 
     keys.forEach(function(key) {
       window[key].addEventListener('click', function() {
-        self.play(key);
+        this.play(key);
       }, false);
     });
   },
@@ -66,10 +66,10 @@ Sprite.prototype = {
    */
   play: function(key) {
     var self = this;
-    var sprite = self._spriteMap[key];
+    var sprite = this._spriteMap[key];
 
     // Play the sprite sound and capture the ID.
-    var id = self.sound.play(sprite);
+    var id = this.sound.play(sprite);
 
     // Create a progress element and begin visually tracking it.
     var elm = document.createElement('div');
@@ -77,13 +77,13 @@ Sprite.prototype = {
     elm.id = id;
     elm.dataset.sprite = sprite;
     window[key].appendChild(elm);
-    self.sounds.push(elm);
+    this.sounds.push(elm);
 
     // When this sound is finished, remove the progress element.
-    self.sound.once('end', function() {
-      var index = self.sounds.indexOf(elm);
+    this.sound.once('end', function() {
+      var index = this.sounds.indexOf(elm);
       if (index >= 0) {
-        self.sounds.splice(index, 1);
+        this.sounds.splice(index, 1);
         window[key].removeChild(elm);
       }
     }, id);
@@ -99,12 +99,12 @@ Sprite.prototype = {
     var scale = window.innerWidth / 3600;
 
     // Resize and reposition the sprite overlays.
-    var keys = Object.keys(self._spriteMap);
+    var keys = Object.keys(this._spriteMap);
     for (var i=0; i<keys.length; i++) {
       var sprite = window[keys[i]];
-      sprite.style.width = Math.round(self._width[i] * scale) + 'px';
-      if (self._left[i]) {
-        sprite.style.left = Math.round(self._left[i] * scale) + 'px';
+      sprite.style.width = Math.round(this._width[i] * scale) + 'px';
+      if (this._left[i]) {
+        sprite.style.left = Math.round(this._left[i] * scale) + 'px';
       }
     }
   },
@@ -116,14 +116,14 @@ Sprite.prototype = {
     var self = this;
 
     // Loop through all active sounds and update their progress bar.
-    for (var i=0; i<self.sounds.length; i++) {
-      var id = parseInt(self.sounds[i].id, 10);
-      var offset = self._sprite[self.sounds[i].dataset.sprite][0];
-      var seek = (self.sound.seek(id) || 0) - (offset / 1000);
-      self.sounds[i].style.width = (((seek / self.sound.duration(id)) * 100) || 0) + '%';
+    for (var i=0; i<this.sounds.length; i++) {
+      var id = parseInt(this.sounds[i].id, 10);
+      var offset = this._sprite[this.sounds[i].dataset.sprite][0];
+      var seek = (this.sound.seek(id) || 0) - (offset / 1000);
+      this.sounds[i].style.width = (((seek / this.sound.duration(id)) * 100) || 0) + '%';
     }
 
-    requestAnimationFrame(self.step.bind(self));
+    requestAnimationFrame(this.step.bind(self));
   }
 };
 

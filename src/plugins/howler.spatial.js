@@ -31,13 +31,13 @@
     var self = this;
 
     // Stop right here if not using Web Audio.
-    if (!self.ctx || !self.ctx.listener) {
+    if (!this.ctx || !this.ctx.listener) {
       return self;
     }
 
     // Loop through all Howls and update their stereo panning.
-    for (var i=self._howls.length-1; i>=0; i--) {
-      self._howls[i].stereo(pan);
+    for (var i=this._howls.length-1; i>=0; i--) {
+      this._howls[i].stereo(pan);
     }
 
     return self;
@@ -55,26 +55,26 @@
     var self = this;
 
     // Stop right here if not using Web Audio.
-    if (!self.ctx || !self.ctx.listener) {
+    if (!this.ctx || !this.ctx.listener) {
       return self;
     }
 
     // Set the defaults for optional 'y' & 'z'.
-    y = (typeof y !== 'number') ? self._pos[1] : y;
-    z = (typeof z !== 'number') ? self._pos[2] : z;
+    y = (typeof y !== 'number') ? this._pos[1] : y;
+    z = (typeof z !== 'number') ? this._pos[2] : z;
 
     if (typeof x === 'number') {
-      self._pos = [x, y, z];
+      this._pos = [x, y, z];
 
-      if (typeof self.ctx.listener.positionX !== 'undefined') {
-        self.ctx.listener.positionX.setTargetAtTime(self._pos[0], Howler.ctx.currentTime, 0.1);
-        self.ctx.listener.positionY.setTargetAtTime(self._pos[1], Howler.ctx.currentTime, 0.1);
-        self.ctx.listener.positionZ.setTargetAtTime(self._pos[2], Howler.ctx.currentTime, 0.1);
+      if (typeof this.ctx.listener.positionX !== 'undefined') {
+        this.ctx.listener.positionX.setTargetAtTime(this._pos[0], Howler.ctx.currentTime, 0.1);
+        this.ctx.listener.positionY.setTargetAtTime(this._pos[1], Howler.ctx.currentTime, 0.1);
+        this.ctx.listener.positionZ.setTargetAtTime(this._pos[2], Howler.ctx.currentTime, 0.1);
       } else {
-        self.ctx.listener.setPosition(self._pos[0], self._pos[1], self._pos[2]);
+        this.ctx.listener.setPosition(this._pos[0], this._pos[1], this._pos[2]);
       }
     } else {
-      return self._pos;
+      return this._pos;
     }
 
     return self;
@@ -98,12 +98,12 @@
     var self = this;
 
     // Stop right here if not using Web Audio.
-    if (!self.ctx || !self.ctx.listener) {
+    if (!this.ctx || !this.ctx.listener) {
       return self;
     }
 
     // Set the defaults for optional 'y' & 'z'.
-    var or = self._orientation;
+    var or = this._orientation;
     y = (typeof y !== 'number') ? or[1] : y;
     z = (typeof z !== 'number') ? or[2] : z;
     xUp = (typeof xUp !== 'number') ? or[3] : xUp;
@@ -111,17 +111,17 @@
     zUp = (typeof zUp !== 'number') ? or[5] : zUp;
 
     if (typeof x === 'number') {
-      self._orientation = [x, y, z, xUp, yUp, zUp];
+      this._orientation = [x, y, z, xUp, yUp, zUp];
 
-      if (typeof self.ctx.listener.forwardX !== 'undefined') {
-        self.ctx.listener.forwardX.setTargetAtTime(x, Howler.ctx.currentTime, 0.1);
-        self.ctx.listener.forwardY.setTargetAtTime(y, Howler.ctx.currentTime, 0.1);
-        self.ctx.listener.forwardZ.setTargetAtTime(z, Howler.ctx.currentTime, 0.1);
-        self.ctx.listener.upX.setTargetAtTime(xUp, Howler.ctx.currentTime, 0.1);
-        self.ctx.listener.upY.setTargetAtTime(yUp, Howler.ctx.currentTime, 0.1);
-        self.ctx.listener.upZ.setTargetAtTime(zUp, Howler.ctx.currentTime, 0.1);
+      if (typeof this.ctx.listener.forwardX !== 'undefined') {
+        this.ctx.listener.forwardX.setTargetAtTime(x, Howler.ctx.currentTime, 0.1);
+        this.ctx.listener.forwardY.setTargetAtTime(y, Howler.ctx.currentTime, 0.1);
+        this.ctx.listener.forwardZ.setTargetAtTime(z, Howler.ctx.currentTime, 0.1);
+        this.ctx.listener.upX.setTargetAtTime(xUp, Howler.ctx.currentTime, 0.1);
+        this.ctx.listener.upY.setTargetAtTime(yUp, Howler.ctx.currentTime, 0.1);
+        this.ctx.listener.upZ.setTargetAtTime(zUp, Howler.ctx.currentTime, 0.1);
       } else {
-        self.ctx.listener.setOrientation(x, y, z, xUp, yUp, zUp);
+        this.ctx.listener.setOrientation(x, y, z, xUp, yUp, zUp);
       }
     } else {
       return or;
@@ -143,10 +143,10 @@
       var self = this;
 
       // Setup user-defined default properties.
-      self._orientation = o.orientation || [1, 0, 0];
-      self._stereo = o.stereo || null;
-      self._pos = o.pos || null;
-      self._pannerAttr = {
+      this._orientation = o.orientation || [1, 0, 0];
+      this._stereo = o.stereo || null;
+      this._pos = o.pos || null;
+      this._pannerAttr = {
         coneInnerAngle: typeof o.coneInnerAngle !== 'undefined' ? o.coneInnerAngle : 360,
         coneOuterAngle: typeof o.coneOuterAngle !== 'undefined' ? o.coneOuterAngle : 360,
         coneOuterGain: typeof o.coneOuterGain !== 'undefined' ? o.coneOuterGain : 0,
@@ -158,9 +158,9 @@
       };
 
       // Setup event listeners.
-      self._onstereo = o.onstereo ? [{fn: o.onstereo}] : [];
-      self._onpos = o.onpos ? [{fn: o.onpos}] : [];
-      self._onorientation = o.onorientation ? [{fn: o.onorientation}] : [];
+      this._onstereo = o.onstereo ? [{fn: o.onstereo}] : [];
+      this._onpos = o.onpos ? [{fn: o.onpos}] : [];
+      this._onorientation = o.onorientation ? [{fn: o.onorientation}] : [];
 
       // Complete initilization with howler.js core's init function.
       return _super.call(this, o);
@@ -177,16 +177,16 @@
     var self = this;
 
     // Stop right here if not using Web Audio.
-    if (!self._webAudio) {
+    if (!this._webAudio) {
       return self;
     }
 
     // If the sound hasn't loaded, add it to the load queue to change stereo pan when capable.
-    if (self._state !== 'loaded') {
-      self._queue.push({
+    if (this._state !== 'loaded') {
+      this._queue.push({
         event: 'stereo',
         action: function() {
-          self.stereo(pan, id);
+          this.stereo(pan, id);
         }
       });
 
@@ -200,18 +200,18 @@
     if (typeof id === 'undefined') {
       // Return the group's stereo panning if no parameters are passed.
       if (typeof pan === 'number') {
-        self._stereo = pan;
-        self._pos = [pan, 0, 0];
+        this._stereo = pan;
+        this._pos = [pan, 0, 0];
       } else {
-        return self._stereo;
+        return this._stereo;
       }
     }
 
     // Change the streo panning of one or all sounds in group.
-    var ids = self._getSoundIds(id);
+    var ids = this._getSoundIds(id);
     for (var i=0; i<ids.length; i++) {
       // Get the sound.
-      var sound = self._soundById(ids[i]);
+      var sound = this._soundById(ids[i]);
 
       if (sound) {
         if (typeof pan === 'number') {
@@ -240,7 +240,7 @@
             }
           }
 
-          self._emit('stereo', sound._id);
+          this._emit('stereo', sound._id);
         } else {
           return sound._stereo;
         }
@@ -262,16 +262,16 @@
     var self = this;
 
     // Stop right here if not using Web Audio.
-    if (!self._webAudio) {
+    if (!this._webAudio) {
       return self;
     }
 
     // If the sound hasn't loaded, add it to the load queue to change position when capable.
-    if (self._state !== 'loaded') {
-      self._queue.push({
+    if (this._state !== 'loaded') {
+      this._queue.push({
         event: 'pos',
         action: function() {
-          self.pos(x, y, z, id);
+          this.pos(x, y, z, id);
         }
       });
 
@@ -286,17 +286,17 @@
     if (typeof id === 'undefined') {
       // Return the group's spatial position if no parameters are passed.
       if (typeof x === 'number') {
-        self._pos = [x, y, z];
+        this._pos = [x, y, z];
       } else {
-        return self._pos;
+        return this._pos;
       }
     }
 
     // Change the spatial position of one or all sounds in group.
-    var ids = self._getSoundIds(id);
+    var ids = this._getSoundIds(id);
     for (var i=0; i<ids.length; i++) {
       // Get the sound.
-      var sound = self._soundById(ids[i]);
+      var sound = this._soundById(ids[i]);
 
       if (sound) {
         if (typeof x === 'number') {
@@ -317,7 +317,7 @@
             }
           }
 
-          self._emit('pos', sound._id);
+          this._emit('pos', sound._id);
         } else {
           return sound._pos;
         }
@@ -341,16 +341,16 @@
     var self = this;
 
     // Stop right here if not using Web Audio.
-    if (!self._webAudio) {
+    if (!this._webAudio) {
       return self;
     }
 
     // If the sound hasn't loaded, add it to the load queue to change orientation when capable.
-    if (self._state !== 'loaded') {
-      self._queue.push({
+    if (this._state !== 'loaded') {
+      this._queue.push({
         event: 'orientation',
         action: function() {
-          self.orientation(x, y, z, id);
+          this.orientation(x, y, z, id);
         }
       });
 
@@ -358,24 +358,24 @@
     }
 
     // Set the defaults for optional 'y' & 'z'.
-    y = (typeof y !== 'number') ? self._orientation[1] : y;
-    z = (typeof z !== 'number') ? self._orientation[2] : z;
+    y = (typeof y !== 'number') ? this._orientation[1] : y;
+    z = (typeof z !== 'number') ? this._orientation[2] : z;
 
     // Setup the group's spatial orientation if no ID is passed.
     if (typeof id === 'undefined') {
       // Return the group's spatial orientation if no parameters are passed.
       if (typeof x === 'number') {
-        self._orientation = [x, y, z];
+        this._orientation = [x, y, z];
       } else {
-        return self._orientation;
+        return this._orientation;
       }
     }
 
     // Change the spatial orientation of one or all sounds in group.
-    var ids = self._getSoundIds(id);
+    var ids = this._getSoundIds(id);
     for (var i=0; i<ids.length; i++) {
       // Get the sound.
-      var sound = self._soundById(ids[i]);
+      var sound = this._soundById(ids[i]);
 
       if (sound) {
         if (typeof x === 'number') {
@@ -386,7 +386,7 @@
             if (!sound._panner) {
               // Make sure we have a position to setup the node with.
               if (!sound._pos) {
-                sound._pos = self._pos || [0, 0, -0.5];
+                sound._pos = this._pos || [0, 0, -0.5];
               }
 
               setupPanner(sound, 'spatial');
@@ -401,7 +401,7 @@
             }
           }
 
-          self._emit('orientation', sound._id);
+          this._emit('orientation', sound._id);
         } else {
           return sound._orientation;
         }
@@ -447,14 +447,14 @@
     var o, id, sound;
 
     // Stop right here if not using Web Audio.
-    if (!self._webAudio) {
+    if (!this._webAudio) {
       return self;
     }
 
     // Determine the values based on arguments.
     if (args.length === 0) {
       // Return the group's panner attribute values.
-      return self._pannerAttr;
+      return this._pannerAttr;
     } else if (args.length === 1) {
       if (typeof args[0] === 'object') {
         o = args[0];
@@ -474,21 +474,21 @@
             };
           }
 
-          self._pannerAttr = {
-            coneInnerAngle: typeof o.pannerAttr.coneInnerAngle !== 'undefined' ? o.pannerAttr.coneInnerAngle : self._coneInnerAngle,
-            coneOuterAngle: typeof o.pannerAttr.coneOuterAngle !== 'undefined' ? o.pannerAttr.coneOuterAngle : self._coneOuterAngle,
-            coneOuterGain: typeof o.pannerAttr.coneOuterGain !== 'undefined' ? o.pannerAttr.coneOuterGain : self._coneOuterGain,
-            distanceModel: typeof o.pannerAttr.distanceModel !== 'undefined' ? o.pannerAttr.distanceModel : self._distanceModel,
-            maxDistance: typeof o.pannerAttr.maxDistance !== 'undefined' ? o.pannerAttr.maxDistance : self._maxDistance,
-            refDistance: typeof o.pannerAttr.refDistance !== 'undefined' ? o.pannerAttr.refDistance : self._refDistance,
-            rolloffFactor: typeof o.pannerAttr.rolloffFactor !== 'undefined' ? o.pannerAttr.rolloffFactor : self._rolloffFactor,
-            panningModel: typeof o.pannerAttr.panningModel !== 'undefined' ? o.pannerAttr.panningModel : self._panningModel
+          this._pannerAttr = {
+            coneInnerAngle: typeof o.pannerAttr.coneInnerAngle !== 'undefined' ? o.pannerAttr.coneInnerAngle : this._coneInnerAngle,
+            coneOuterAngle: typeof o.pannerAttr.coneOuterAngle !== 'undefined' ? o.pannerAttr.coneOuterAngle : this._coneOuterAngle,
+            coneOuterGain: typeof o.pannerAttr.coneOuterGain !== 'undefined' ? o.pannerAttr.coneOuterGain : this._coneOuterGain,
+            distanceModel: typeof o.pannerAttr.distanceModel !== 'undefined' ? o.pannerAttr.distanceModel : this._distanceModel,
+            maxDistance: typeof o.pannerAttr.maxDistance !== 'undefined' ? o.pannerAttr.maxDistance : this._maxDistance,
+            refDistance: typeof o.pannerAttr.refDistance !== 'undefined' ? o.pannerAttr.refDistance : this._refDistance,
+            rolloffFactor: typeof o.pannerAttr.rolloffFactor !== 'undefined' ? o.pannerAttr.rolloffFactor : this._rolloffFactor,
+            panningModel: typeof o.pannerAttr.panningModel !== 'undefined' ? o.pannerAttr.panningModel : this._panningModel
           };
         }
       } else {
         // Return this sound's panner attribute values.
-        sound = self._soundById(parseInt(args[0], 10));
-        return sound ? sound._pannerAttr : self._pannerAttr;
+        sound = this._soundById(parseInt(args[0], 10));
+        return sound ? sound._pannerAttr : this._pannerAttr;
       }
     } else if (args.length === 2) {
       o = args[0];
@@ -496,9 +496,9 @@
     }
 
     // Update the values of the specified sounds.
-    var ids = self._getSoundIds(id);
+    var ids = this._getSoundIds(id);
     for (var i=0; i<ids.length; i++) {
-      sound = self._soundById(ids[i]);
+      sound = this._soundById(ids[i]);
 
       if (sound) {
         // Merge the new values into the sound.
@@ -528,7 +528,7 @@
         } else {
           // Make sure we have a position to setup the node with.
           if (!sound._pos) {
-            sound._pos = self._pos || [0, 0, -0.5];
+            sound._pos = this._pos || [0, 0, -0.5];
           }
 
           // Create a new panner node.
@@ -551,22 +551,22 @@
   Sound.prototype.init = (function(_super) {
     return function() {
       var self = this;
-      var parent = self._parent;
+      var parent = this._parent;
 
       // Setup user-defined default properties.
-      self._orientation = parent._orientation;
-      self._stereo = parent._stereo;
-      self._pos = parent._pos;
-      self._pannerAttr = parent._pannerAttr;
+      this._orientation = parent._orientation;
+      this._stereo = parent._stereo;
+      this._pos = parent._pos;
+      this._pannerAttr = parent._pannerAttr;
 
       // Complete initilization with howler.js core Sound's init function.
       _super.call(this);
 
       // If a stereo or position was specified, set it up.
-      if (self._stereo) {
-        parent.stereo(self._stereo);
-      } else if (self._pos) {
-        parent.pos(self._pos[0], self._pos[1], self._pos[2], self._id);
+      if (this._stereo) {
+        parent.stereo(this._stereo);
+      } else if (this._pos) {
+        parent.pos(this._pos[0], this._pos[1], this._pos[2], this._id);
       }
     };
   })(Sound.prototype.init);
@@ -579,23 +579,23 @@
   Sound.prototype.reset = (function(_super) {
     return function() {
       var self = this;
-      var parent = self._parent;
+      var parent = this._parent;
 
       // Reset all spatial plugin properties on this sound.
-      self._orientation = parent._orientation;
-      self._stereo = parent._stereo;
-      self._pos = parent._pos;
-      self._pannerAttr = parent._pannerAttr;
+      this._orientation = parent._orientation;
+      this._stereo = parent._stereo;
+      this._pos = parent._pos;
+      this._pannerAttr = parent._pannerAttr;
 
       // If a stereo or position was specified, set it up.
-      if (self._stereo) {
-        parent.stereo(self._stereo);
-      } else if (self._pos) {
-        parent.pos(self._pos[0], self._pos[1], self._pos[2], self._id);
-      } else if (self._panner) {
+      if (this._stereo) {
+        parent.stereo(this._stereo);
+      } else if (this._pos) {
+        parent.pos(this._pos[0], this._pos[1], this._pos[2], this._id);
+      } else if (this._panner) {
         // Disconnect the panner.
-        self._panner.disconnect(0);
-        self._panner = undefined;
+        this._panner.disconnect(0);
+        this._panner = undefined;
         parent._refreshBuffer(self);
       }
 

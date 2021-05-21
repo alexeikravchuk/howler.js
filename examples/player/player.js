@@ -46,8 +46,8 @@ Player.prototype = {
     var self = this;
     var sound;
 
-    index = typeof index === 'number' ? index : self.index;
-    var data = self.playlist[index];
+    index = typeof index === 'number' ? index : this.index;
+    var data = this.playlist[index];
 
     // If we already loaded this track, use the current one.
     // Otherwise, setup and load a new Howl.
@@ -59,10 +59,10 @@ Player.prototype = {
         html5: true, // Force to HTML5 so that the audio can stream in (best for large files).
         onplay: function() {
           // Display the duration.
-          duration.innerHTML = self.formatTime(Math.round(sound.duration()));
+          duration.innerHTML = this.formatTime(Math.round(sound.duration()));
 
           // Start upating the progress of the track.
-          requestAnimationFrame(self.step.bind(self));
+          requestAnimationFrame(this.step.bind(self));
 
           // Start the wave animation if we have already loaded
           wave.container.style.display = 'block';
@@ -79,7 +79,7 @@ Player.prototype = {
           // Stop the wave animation.
           wave.container.style.display = 'none';
           bar.style.display = 'block';
-          self.skip('next');
+          this.skip('next');
         },
         onpause: function() {
           // Stop the wave animation.
@@ -93,7 +93,7 @@ Player.prototype = {
         },
         onseek: function() {
           // Start upating the progress of the track.
-          requestAnimationFrame(self.step.bind(self));
+          requestAnimationFrame(this.step.bind(self));
         }
       });
     }
@@ -115,7 +115,7 @@ Player.prototype = {
     }
 
     // Keep track of the index we are currently playing.
-    self.index = index;
+    this.index = index;
   },
 
   /**
@@ -125,7 +125,7 @@ Player.prototype = {
     var self = this;
 
     // Get the Howl we want to manipulate.
-    var sound = self.playlist[self.index].howl;
+    var sound = this.playlist[this.index].howl;
 
     // Puase the sound.
     sound.pause();
@@ -145,18 +145,18 @@ Player.prototype = {
     // Get the next track based on the direction of the track.
     var index = 0;
     if (direction === 'prev') {
-      index = self.index - 1;
+      index = this.index - 1;
       if (index < 0) {
-        index = self.playlist.length - 1;
+        index = this.playlist.length - 1;
       }
     } else {
-      index = self.index + 1;
-      if (index >= self.playlist.length) {
+      index = this.index + 1;
+      if (index >= this.playlist.length) {
         index = 0;
       }
     }
 
-    self.skipTo(index);
+    this.skipTo(index);
   },
 
   /**
@@ -167,15 +167,15 @@ Player.prototype = {
     var self = this;
 
     // Stop the current track.
-    if (self.playlist[self.index].howl) {
-      self.playlist[self.index].howl.stop();
+    if (this.playlist[this.index].howl) {
+      this.playlist[this.index].howl.stop();
     }
 
     // Reset progress.
     progress.style.width = '0%';
 
     // Play the new track.
-    self.play(index);
+    this.play(index);
   },
 
   /**
@@ -202,7 +202,7 @@ Player.prototype = {
     var self = this;
 
     // Get the Howl we want to manipulate.
-    var sound = self.playlist[self.index].howl;
+    var sound = this.playlist[this.index].howl;
 
     // Convert the percent into a seek position.
     if (sound.playing()) {
@@ -217,16 +217,16 @@ Player.prototype = {
     var self = this;
 
     // Get the Howl we want to manipulate.
-    var sound = self.playlist[self.index].howl;
+    var sound = this.playlist[this.index].howl;
 
     // Determine our current seek position.
     var seek = sound.seek() || 0;
-    timer.innerHTML = self.formatTime(Math.round(seek));
+    timer.innerHTML = this.formatTime(Math.round(seek));
     progress.style.width = (((seek / sound.duration()) * 100) || 0) + '%';
 
     // If the sound is still playing, continue stepping.
     if (sound.playing()) {
-      requestAnimationFrame(self.step.bind(self));
+      requestAnimationFrame(this.step.bind(self));
     }
   },
 
