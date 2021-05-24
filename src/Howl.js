@@ -12,33 +12,33 @@ export class Howl {
 	/**
 	 * Create an audio group controller.
 	 * @param {Object} o Passed in properties for this group.
-	 * @param {boolean} o.autoplay
-	 * @param {Array<string>|string} o.format
-	 * @param {boolean} o.html5
-	 * @param {boolean} o.mute
-	 * @param {boolean} o.loop
-	 * @param {number} o.pool
-	 * @param {boolean|'metadata'}o.preload
-	 * @param {number} o.rate
-	 * @param {object} o.sprite
-	 * @param {Array<string>|string} o.src
-	 * @param {number} o.volume
+	 * @param {Array<String>|String} o.src The sources to the track(s) to be loaded for the sound (base64 data URIs)
+	 * @param {boolean} o.autoplay Set to true to automatically start playback when sound is loaded
+	 * @param {Array<string>|string} o.format You may specify a format in situations where extraction won't work
+	 * @param {boolean} o.html5 Set to true to force HTML5 Audio
+	 * @param {boolean} o.mute Set to true to load the audio muted
+	 * @param {boolean} o.loop Set to true to automatically loop the sound forever.
+	 * @param {number} o.pool The size of the inactive sounds pool.
+	 * @param {boolean|'metadata'} o.preload Automatically begin downloading the audio file when the Howl is defined
+	 * @param {number} o.rate The rate of playback. 0.5 to 4.0, with 1.0 being normal speed
+	 * @param {object} o.sprite Define a sound sprite for the sound. The offset and duration are defined in milliseconds. A third (optional) parameter is available to set a sprite as looping
+	 * @param {number} o.volume The volume of the specific track, from 0.0 to 1.0
 	 * @param {Array<number>} o.orientation The direction the audio source is pointing in the 3D cartesian coordinate space
 	 * @param {Number} o.stereo  The stereo panning value of the audio source for this sound or group
 	 * @param {Array<number>} o.pos  The 3D spatial position of the audio source for this sound or group relative to the global listener
-	 * @param {Function} o.onend callback function
-	 * @param {Function} o.onfade callback function
-	 * @param {Function} o.onload callback function
-	 * @param {Function} o.onloaderror callback function
-	 * @param {Function} o.onplayerror callback function
-	 * @param {Function} o.onpause callback function
-	 * @param {Function} o.onplay callback function
-	 * @param {Function} o.onstop callback function
-	 * @param {Function} o.onmute callback function
-	 * @param {Function} o.onvolume callback function
-	 * @param {Function} o.onrate callback function
-	 * @param {Function} o.onseek callback function
-	 * @param {Function} o.onunlock callback function
+	 * @param {Function} o.onend Fires when the sound finishes playing (if it is looping, it'll fire at the end of each loop). The first parameter is the ID of the sound
+	 * @param {Function} o.onfade Fires when the current sound finishes fading in/out. The first parameter is the ID of the sound
+	 * @param {Function} o.onload Fires when the sound is loaded
+	 * @param {Function} o.onloaderror Fires when the sound is unable to load. The first parameter is the ID of the sound (if it exists) and the second is the error message/code
+	 * @param {Function} o.onplayerror Fires when the sound is unable to play. The first parameter is the ID of the sound and the second is the error message/code
+	 * @param {Function} o.onpause Fires when the sound has been paused. The first parameter is the ID of the sound
+	 * @param {Function} o.onplay Fires when the sound begins playing. The first parameter is the ID of the sound
+	 * @param {Function} o.onstop Fires when the sound has been stopped. The first parameter is the ID of the sound
+	 * @param {Function} o.onmute Fires when the sound has been muted/unmuted. The first parameter is the ID of the sound
+	 * @param {Function} o.onvolume Fires when the sound's volume has changed. The first parameter is the ID of the sound
+	 * @param {Function} o.onrate Fires when the sound's playback rate has changed. The first parameter is the ID of the sound
+	 * @param {Function} o.onseek Fires when the sound has been seeked. The first parameter is the ID of the sound
+	 * @param {Function} o.onunlock Fires when audio has been automatically unlocked through a touch/click event
 	 * @param {Function} o.onstereo Fires when the current sound has the stereo panning changed. The first parameter is the ID of the sound.
 	 * @param {Function} o.onpos Fires when the current sound has the listener position changed. The first parameter is the ID of the sound.
 	 * @param {Function} o.onorientation Fires when the current sound has the direction of the listener changed. The first parameter is the ID of the sound.
