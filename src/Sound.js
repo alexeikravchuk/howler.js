@@ -1,4 +1,13 @@
-import { Howler } from './HowlerGlobal';
+import {
+	DEFAULT,
+	ENDED,
+	ERROR,
+	Howler,
+	LOAD,
+	LOADED,
+	LOADERROR,
+	UNDEFINED
+} from './HowlerGlobal';
 
 /**
  * Setup the sound object, which each node attached to a Howl group is contained in.
@@ -31,7 +40,7 @@ export class Sound {
 		this._seek = 0;
 		this._paused = true;
 		this._ended = true;
-		this._sprite = '__default';
+		this._sprite = DEFAULT;
 
 		// Generate a unique ID for this sound.
 		this._id = ++Howler._counter;
@@ -61,11 +70,10 @@ export class Sound {
 		const volume = (Howler._muted || this._muted || this._parent._muted) ? 0 : this._volume;
 
 		if (parent._webAudio) {
+			const { ctx } = Howler;
 			// Create the gain node for controlling volume (the source will connect to this).
-			this._node = (typeof Howler.ctx.createGain === 'undefined') ?
-						 Howler.ctx.createGainNode() :
-						 Howler.ctx.createGain();
-			this._node.gain.setValueAtTime(volume, Howler.ctx.currentTime);
+			this._node = (typeof ctx.createGain === UNDEFINED) ? ctx.createGainNode() : ctx.createGain();
+			this._node.gain.setValueAtTime(volume, ctx.currentTime);
 			this._node.paused = true;
 			this._node.connect(Howler.masterGain);
 		} else if (!Howler.noAudio) {
@@ -74,7 +82,7 @@ export class Sound {
 
 			// Listen for errors (http://dev.w3.org/html5/spec-author-view/spec.html#mediaerror).
 			this._errorFn = () => this._errorListener();
-			this._node.addEventListener('error', this._errorFn, false);
+			this._node.addEventListener(ERROR, this._errorFn, false);
 
 			// Listen for 'canplaythrough' event to let us know the sound is ready.
 			this._loadFn = () => this._loadListener();
@@ -83,7 +91,7 @@ export class Sound {
 			// Listen for the 'ended' event on the sound to account for edge-case where
 			// a finite sound has a duration of Infinity.
 			this._endFn = () => this._endListener();
-			this._node.addEventListener('ended', this._endFn, false);
+			this._node.addEventListener(ENDED, this._endFn, false);
 
 			// Setup the new audio node.
 			this._node.src = parent._src;
@@ -131,7 +139,7 @@ export class Sound {
 		this._rateSeek = 0;
 		this._paused = true;
 		this._ended = true;
-		this._sprite = '__default';
+		this._sprite = DEFAULT;
 
 		// Generate a new ID so that it isn't confused with the previous sound.
 		this._id = ++Howler._counter;
@@ -144,10 +152,10 @@ export class Sound {
 	 */
 	_errorListener() {
 		// Fire an error event and pass back the code.
-		this._parent._emit('loaderror', this._id, this._node.error ? this._node.error.code : 0);
+		this._parent._emit(LOADERROR, this._id, this._node.error ? this._node.error.code : 0);
 
 		// Clear the event listener.
-		this._node.removeEventListener('error', this._errorFn, false);
+		this._node.removeEventListener(ERROR, this._errorFn, false);
 	}
 
 	/**
@@ -164,9 +172,9 @@ export class Sound {
 			parent._sprite = { __default: [0, parent._duration * 1000] };
 		}
 
-		if (parent._state !== 'loaded') {
-			parent._state = 'loaded';
-			parent._emit('load');
+		if (parent._state !== LOADED) {
+			parent._state = LOADED;
+			parent._emit(LOAD);
 			parent._loadQueue();
 		}
 
@@ -196,6 +204,6 @@ export class Sound {
 		}
 
 		// Clear the event listener since the duration is now correct.
-		this._node.removeEventListener('ended', this._endFn, false);
+		this._node.removeEventListener(ENDED, this._endFn, false);
 	}
 }

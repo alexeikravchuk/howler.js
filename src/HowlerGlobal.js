@@ -1,5 +1,37 @@
 import { setupAudioContext } from './utils/setupAudioContext';
 
+export const BOOLEAN = 'boolean';
+export const FUNCTION = 'function';
+export const NUMBER = 'number';
+export const STRING = 'string';
+export const UNDEFINED = 'undefined';
+
+export const DEFAULT = '__default';
+export const CANPLAY = 'canplay';
+export const CANPLAYTHROUGH = `${CANPLAY}through`;
+export const END = 'end';
+export const ENDED = `${END}ed`;
+export const ERROR = 'error';
+export const FADE = 'fade';
+export const INTERRUPTED = 'interrupted';
+export const LOAD = 'load';
+export const LOADING = `${LOAD}ing`;
+export const LOADED = `${LOAD}ed`;
+export const LOADERROR = `${LOAD}${ERROR}`;
+export const ON = '_on';
+export const PLAY = 'play';
+export const PLAYERROR = `${PLAY}${ERROR}`;
+export const POINTERDOWN = 'pointerdown';
+export const POINTERUP = 'pointerup';
+export const RATE = 'rate';
+export const RESUME = 'resume';
+export const RUNNING = 'running';
+export const SEEK = 'seek';
+export const SUSPENDED = 'suspended';
+export const SUSPENDING = 'suspending';
+export const UNLOADED = 'unloaded';
+export const VOLUME = 'volume';
+
 /**
  * Create the global controller. All contained methods and properties apply
  * to all sounds that are currently playing or will be in the future.
@@ -29,7 +61,7 @@ export class HowlerGlobal {
 		this._howls = [];
 		this._muted = false;
 		this._volume = 1;
-		this._canPlayEvent = 'canplaythrough';
+		this._canPlayEvent = CANPLAYTHROUGH;
 		this._navigator = window && window.navigator || null;
 
 		// Public properties.
@@ -61,7 +93,7 @@ export class HowlerGlobal {
 			setupAudioContext(this);
 		}
 
-		if (typeof vol !== 'undefined' && vol >= 0 && vol <= 1) {
+		if (typeof vol !== UNDEFINED && vol >= 0 && vol <= 1) {
 			this._volume = vol;
 
 			// Don't update any of the nodes if we are muted.
@@ -71,7 +103,7 @@ export class HowlerGlobal {
 
 			// When using Web Audio, we just need to adjust the master gain.
 			if (this.usingWebAudio) {
-				this.masterGain.gain.setValueAtTime(vol, Howler.ctx.currentTime);
+				this.masterGain.gain.setValueAtTime(vol, this.ctx.currentTime);
 			}
 
 			// Loop through and change volume for all HTML5 audio nodes.
@@ -133,18 +165,22 @@ export class HowlerGlobal {
 		}
 
 		// Set the defaults for optional 'y' & 'z'.
-		y = (typeof y !== 'number') ? this._pos[1] : y;
-		z = (typeof z !== 'number') ? this._pos[2] : z;
+		y = (typeof y !== NUMBER) ? this._pos[1] : y;
+		z = (typeof z !== NUMBER) ? this._pos[2] : z;
 
-		if (typeof x === 'number') {
+		if (typeof x === NUMBER) {
 			this._pos = [x, y, z];
+			const {
+				listener,
+				currentTime
+			} = this.ctx;
 
-			if (typeof this.ctx.listener.positionX !== 'undefined') {
-				this.ctx.listener.positionX.setTargetAtTime(this._pos[0], Howler.ctx.currentTime, 0.1);
-				this.ctx.listener.positionY.setTargetAtTime(this._pos[1], Howler.ctx.currentTime, 0.1);
-				this.ctx.listener.positionZ.setTargetAtTime(this._pos[2], Howler.ctx.currentTime, 0.1);
+			if (typeof listener.positionX !== UNDEFINED) {
+				listener.positionX.setTargetAtTime(this._pos[0], currentTime, 0.1);
+				listener.positionY.setTargetAtTime(this._pos[1], currentTime, 0.1);
+				listener.positionZ.setTargetAtTime(this._pos[2], currentTime, 0.1);
 			} else {
-				this.ctx.listener.setPosition(this._pos[0], this._pos[1], this._pos[2]);
+				listener.setPosition(this._pos[0], this._pos[1], this._pos[2]);
 			}
 		} else {
 			return this._pos;
@@ -175,24 +211,28 @@ export class HowlerGlobal {
 
 		// Set the defaults for optional 'y' & 'z'.
 		const or = this._orientation;
-		y = (typeof y !== 'number') ? or[1] : y;
-		z = (typeof z !== 'number') ? or[2] : z;
-		xUp = (typeof xUp !== 'number') ? or[3] : xUp;
-		yUp = (typeof yUp !== 'number') ? or[4] : yUp;
-		zUp = (typeof zUp !== 'number') ? or[5] : zUp;
+		y = (typeof y !== NUMBER) ? or[1] : y;
+		z = (typeof z !== NUMBER) ? or[2] : z;
+		xUp = (typeof xUp !== NUMBER) ? or[3] : xUp;
+		yUp = (typeof yUp !== NUMBER) ? or[4] : yUp;
+		zUp = (typeof zUp !== NUMBER) ? or[5] : zUp;
 
-		if (typeof x === 'number') {
+		if (typeof x === NUMBER) {
 			this._orientation = [x, y, z, xUp, yUp, zUp];
+			const {
+				listener,
+				currentTime
+			} = this.ctx;
 
-			if (typeof this.ctx.listener.forwardX !== 'undefined') {
-				this.ctx.listener.forwardX.setTargetAtTime(x, Howler.ctx.currentTime, 0.1);
-				this.ctx.listener.forwardY.setTargetAtTime(y, Howler.ctx.currentTime, 0.1);
-				this.ctx.listener.forwardZ.setTargetAtTime(z, Howler.ctx.currentTime, 0.1);
-				this.ctx.listener.upX.setTargetAtTime(xUp, Howler.ctx.currentTime, 0.1);
-				this.ctx.listener.upY.setTargetAtTime(yUp, Howler.ctx.currentTime, 0.1);
-				this.ctx.listener.upZ.setTargetAtTime(zUp, Howler.ctx.currentTime, 0.1);
+			if (typeof listener.forwardX !== UNDEFINED) {
+				listener.forwardX.setTargetAtTime(x, currentTime, 0.1);
+				listener.forwardY.setTargetAtTime(y, currentTime, 0.1);
+				listener.forwardZ.setTargetAtTime(z, currentTime, 0.1);
+				listener.upX.setTargetAtTime(xUp, currentTime, 0.1);
+				listener.upY.setTargetAtTime(yUp, currentTime, 0.1);
+				listener.upZ.setTargetAtTime(zUp, currentTime, 0.1);
 			} else {
-				this.ctx.listener.setOrientation(x, y, z, xUp, yUp, zUp);
+				listener.setOrientation(x, y, z, xUp, yUp, zUp);
 			}
 		} else {
 			return or;
@@ -215,7 +255,7 @@ export class HowlerGlobal {
 
 		// With Web Audio, we just need to mute the master gain.
 		if (this.usingWebAudio) {
-			this.masterGain.gain.setValueAtTime(muted ? 0 : this._volume, Howler.ctx.currentTime);
+			this.masterGain.gain.setValueAtTime(muted ? 0 : this._volume, this.ctx.currentTime);
 		}
 
 		// Loop through and mute all HTML5 Audio nodes.
@@ -260,7 +300,7 @@ export class HowlerGlobal {
 		}
 
 		// Create a new AudioContext to make sure it is fully reset.
-		if (this.usingWebAudio && this.ctx && typeof this.ctx.close !== 'undefined') {
+		if (this.usingWebAudio && this.ctx && typeof this.ctx.close !== UNDEFINED) {
 			this.ctx.close();
 			this.ctx = null;
 			setupAudioContext(this);
@@ -285,7 +325,7 @@ export class HowlerGlobal {
 	_setup() {
 		let test;
 		// Keeps track of the suspend/resume state of the AudioContext.
-		this.state = this.ctx ? this.ctx.state || 'suspended' : 'suspended';
+		this.state = this.ctx ? this.ctx.state || SUSPENDED : SUSPENDED;
 
 		// Automatically begin the 30-second suspend process
 		this._autoSuspend();
@@ -293,13 +333,13 @@ export class HowlerGlobal {
 		// Check if audio is available.
 		if (!this.usingWebAudio) {
 			// No audio is available on this system if noAudio is set to true.
-			if (typeof Audio !== 'undefined') {
+			if (typeof Audio !== UNDEFINED) {
 				try {
 					test = new Audio();
 
 					// Check if the canplaythrough event is available.
-					if (typeof test.oncanplaythrough === 'undefined') {
-						this._canPlayEvent = 'canplay';
+					if (typeof test.oncanplaythrough === UNDEFINED) {
+						this._canPlayEvent = CANPLAY;
 					}
 				} catch (e) {
 					this.noAudio = true;
@@ -335,12 +375,12 @@ export class HowlerGlobal {
 
 		// Must wrap in a try/catch because IE11 in server mode throws an error.
 		try {
-			audioTest = (typeof Audio !== 'undefined') ? new Audio() : null;
+			audioTest = (typeof Audio !== UNDEFINED) ? new Audio() : null;
 		} catch (err) {
 			return this;
 		}
 
-		if (!audioTest || typeof audioTest.canPlayType !== 'function') {
+		if (!audioTest || typeof audioTest.canPlayType !== FUNCTION) {
 			return this;
 		}
 
@@ -452,14 +492,14 @@ export class HowlerGlobal {
 			source.connect(this.ctx.destination);
 
 			// Play the empty buffer.
-			if (typeof source.start === 'undefined') {
+			if (typeof source.start === UNDEFINED) {
 				source.noteOn(0);
 			} else {
 				source.start(0);
 			}
 
 			// Calling resume() on a stack initiated by user gesture is what actually unlocks the audio on Android Chrome >= 55.
-			if (typeof this.ctx.resume === 'function') {
+			if (typeof this.ctx.resume === FUNCTION) {
 				this.ctx.resume();
 			}
 
@@ -471,10 +511,8 @@ export class HowlerGlobal {
 				this._audioUnlocked = true;
 
 				// Remove the touch start listener.
-				document.removeEventListener('touchstart', unlock, true);
-				document.removeEventListener('touchend', unlock, true);
-				document.removeEventListener('click', unlock, true);
-				document.removeEventListener('keydown', unlock, true);
+				document.removeEventListener(POINTERDOWN, unlock, true);
+				document.removeEventListener(POINTERUP, unlock, true);
 
 				// Let all sounds know that audio has been unlocked.
 				for (let i = 0; i < this._howls.length; i++) {
@@ -484,10 +522,8 @@ export class HowlerGlobal {
 		};
 
 		// Setup a touch start listener to attempt an unlock in.
-		document.addEventListener('touchstart', unlock, true);
-		document.addEventListener('touchend', unlock, true);
-		document.addEventListener('click', unlock, true);
-		document.addEventListener('keydown', unlock, true);
+		document.addEventListener(POINTERDOWN, unlock, true);
+		document.addEventListener(POINTERUP, unlock, true);
 
 		return this;
 	}
@@ -505,7 +541,7 @@ export class HowlerGlobal {
 
 		// Check if the audio is locked and throw a warning.
 		const testPlay = new Audio().play();
-		if (testPlay && typeof Promise !== 'undefined' && (testPlay instanceof Promise || typeof testPlay.then === 'function')) {
+		if (testPlay && typeof Promise !== UNDEFINED && (testPlay instanceof Promise || typeof testPlay.then === FUNCTION)) {
 			testPlay.catch(() => {
 				console.warn('HTML5 Audio pool exhausted, returning potentially locked audio object.');
 			});
@@ -533,7 +569,7 @@ export class HowlerGlobal {
 	 * @return {HowlerGlobal}
 	 */
 	_autoSuspend() {
-		if (!this.autoSuspend || !this.ctx || typeof this.ctx.suspend === 'undefined' || !Howler.usingWebAudio) {
+		if (!this.autoSuspend || !this.ctx || typeof this.ctx.suspend === UNDEFINED || !this.usingWebAudio) {
 			return;
 		}
 
@@ -559,11 +595,11 @@ export class HowlerGlobal {
 			}
 
 			this._suspendTimer = null;
-			this.state = 'suspending';
+			this.state = SUSPENDING;
 
 			// Handle updating the state of the audio context after suspending.
 			const handleSuspension = () => {
-				this.state = 'suspended';
+				this.state = SUSPENDED;
 
 				if (this._resumeAfterSuspend) {
 					delete this._resumeAfterSuspend;
@@ -584,18 +620,18 @@ export class HowlerGlobal {
 	 * @return {HowlerGlobal}
 	 */
 	_autoResume() {
-		if (this.ctx && this.ctx.resume && Howler.usingWebAudio) {
+		if (this.ctx && this.ctx.resume && this.usingWebAudio) {
 
-			if (this.state === 'running' && this.ctx.state !== 'interrupted' && this._suspendTimer) {
+			if (this.state === RUNNING && this.ctx.state !== INTERRUPTED && this._suspendTimer) {
 				clearTimeout(this._suspendTimer);
 				this._suspendTimer = null;
-			} else if (this.state === 'suspended' || this.state === 'running' && this.ctx.state === 'interrupted') {
+			} else if (this.state === SUSPENDED || this.state === RUNNING && this.ctx.state === INTERRUPTED) {
 				this.ctx.resume().then(() => {
-					this.state = 'running';
+					this.state = RUNNING;
 
 					// Emit to all Howls that the audio has resumed.
 					for (let i = 0; i < this._howls.length; i++) {
-						this._howls[i]._emit('resume');
+						this._howls[i]._emit(RESUME);
 					}
 				});
 
@@ -603,7 +639,7 @@ export class HowlerGlobal {
 					clearTimeout(this._suspendTimer);
 					this._suspendTimer = null;
 				}
-			} else if (this.state === 'suspending') {
+			} else if (this.state === SUSPENDING) {
 				this._resumeAfterSuspend = true;
 			}
 

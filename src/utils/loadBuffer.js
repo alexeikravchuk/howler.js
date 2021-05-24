@@ -1,12 +1,11 @@
-import { Howler } from '../HowlerGlobal';
-
 export const cache = {};
 
 /**
  * Buffer a sound from URL, Data URI or cache and decode to audio source (Web Audio API).
  * @param  {Howl} howl
+ * @param  {AudioContext} ctx
  */
-export function loadBuffer(howl) {
+export function loadBuffer(howl, ctx) {
 	const url = howl._src;
 
 	// Check if the buffer has already been cached and use it instead.
@@ -26,7 +25,7 @@ export function loadBuffer(howl) {
 			dataView[i] = data.charCodeAt(i);
 		}
 
-		decodeAudioData(dataView.buffer, howl);
+		decodeAudioData(dataView.buffer, howl, ctx);
 	} else {
 		console.error('Loading a buffer from a URL is not supported', url);
 	}
@@ -36,8 +35,9 @@ export function loadBuffer(howl) {
  * Decode audio data from an array buffer.
  * @param  {ArrayBuffer} arraybuffer The audio data.
  * @param  {Howl} howl
+ * @param  {AudioContext} ctx
  */
-function decodeAudioData(arraybuffer, howl) {
+function decodeAudioData(arraybuffer, howl, ctx) {
 	// Fire a load error if something broke.
 	const error = () => {
 		howl._emit('loaderror', null, 'Decoding audio data failed.');
@@ -54,10 +54,10 @@ function decodeAudioData(arraybuffer, howl) {
 	};
 
 	// Decode the buffer into an audio source.
-	if (typeof Promise !== 'undefined' && Howler.ctx.decodeAudioData.length === 1) {
-		Howler.ctx.decodeAudioData(arraybuffer).then(success).catch(error);
+	if (typeof Promise !== 'undefined' && ctx.decodeAudioData.length === 1) {
+		ctx.decodeAudioData(arraybuffer).then(success).catch(error);
 	} else {
-		Howler.ctx.decodeAudioData(arraybuffer, success, error);
+		ctx.decodeAudioData(arraybuffer, success, error);
 	}
 }
 

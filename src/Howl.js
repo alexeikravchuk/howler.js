@@ -1,4 +1,30 @@
-import { Howler } from './HowlerGlobal';
+import {
+	Howler,
+	UNDEFINED,
+	RUNNING,
+	INTERRUPTED,
+	RESUME,
+	FUNCTION,
+	NUMBER,
+	STRING,
+	LOADED,
+	ENDED,
+	PLAYERROR,
+	ERROR,
+	LOAD,
+	LOADERROR,
+	LOADING,
+	BOOLEAN,
+	UNLOADED,
+	PLAY,
+	DEFAULT,
+	END,
+	ON,
+	VOLUME,
+	FADE,
+	RATE,
+	SEEK
+} from './HowlerGlobal';
 import { Sound } from './Sound';
 import { setupAudioContext } from './utils/setupAudioContext';
 import { setupPanner } from './utils/setupPanner';
@@ -7,6 +33,7 @@ import {
 	loadBuffer
 } from './utils/loadBuffer';
 
+const NODE_SRC = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
 
 export class Howl {
 	/**
@@ -100,32 +127,32 @@ export class Howl {
 		this._stereo = stereo;
 		this._pos = pos;
 		this._pannerAttr = {
-			coneInnerAngle: typeof o.coneInnerAngle !== 'undefined' ? o.coneInnerAngle : 360,
-			coneOuterAngle: typeof o.coneOuterAngle !== 'undefined' ? o.coneOuterAngle : 360,
-			coneOuterGain: typeof o.coneOuterGain !== 'undefined' ? o.coneOuterGain : 0,
-			distanceModel: typeof o.distanceModel !== 'undefined' ? o.distanceModel : 'inverse',
-			maxDistance: typeof o.maxDistance !== 'undefined' ? o.maxDistance : 10000,
-			panningModel: typeof o.panningModel !== 'undefined' ? o.panningModel : 'HRTF',
-			refDistance: typeof o.refDistance !== 'undefined' ? o.refDistance : 1,
-			rolloffFactor: typeof o.rolloffFactor !== 'undefined' ? o.rolloffFactor : 1
+			coneInnerAngle: typeof o.coneInnerAngle !== UNDEFINED ? o.coneInnerAngle : 360,
+			coneOuterAngle: typeof o.coneOuterAngle !== UNDEFINED ? o.coneOuterAngle : 360,
+			coneOuterGain: typeof o.coneOuterGain !== UNDEFINED ? o.coneOuterGain : 0,
+			distanceModel: typeof o.distanceModel !== UNDEFINED ? o.distanceModel : 'inverse',
+			maxDistance: typeof o.maxDistance !== UNDEFINED ? o.maxDistance : 10000,
+			panningModel: typeof o.panningModel !== UNDEFINED ? o.panningModel : 'HRTF',
+			refDistance: typeof o.refDistance !== UNDEFINED ? o.refDistance : 1,
+			rolloffFactor: typeof o.rolloffFactor !== UNDEFINED ? o.rolloffFactor : 1
 		};
 
 
 		this._autoplay = autoplay;
-		this._format = (typeof format !== 'string') ? format : [format];
+		this._format = (typeof format !== STRING) ? format : [format];
 		this._html5 = html5;
 		this._muted = mute;
 		this._loop = loop;
 		this._pool = pool;
-		this._preload = (typeof preload === 'boolean' || preload === 'metadata') ? preload : true;
+		this._preload = (typeof preload === BOOLEAN || preload === 'metadata') ? preload : true;
 		this._rate = rate;
 		this._sprite = sprite;
-		this._src = (typeof src !== 'string') ? src : [src];
+		this._src = (typeof src !== STRING) ? src : [src];
 		this._volume = volume;
 
 		// Setup all other default properties.
 		this._duration = 0;
-		this._state = 'unloaded';
+		this._state = UNLOADED;
 		this._sounds = [];
 		this._endTimers = {};
 		this._queue = [];
@@ -154,7 +181,7 @@ export class Howl {
 		this._webAudio = Howler.usingWebAudio && !this._html5;
 
 		// Automatically try to enable audio.
-		if (typeof Howler.ctx !== 'undefined' && Howler.ctx && Howler.autoUnlock) {
+		if (typeof Howler.ctx !== UNDEFINED && Howler.ctx && Howler.autoUnlock) {
 			Howler._unlockAudio();
 		}
 
@@ -164,7 +191,7 @@ export class Howl {
 		// If they selected autoplay, add a play event to the load queue.
 		if (this._autoplay) {
 			this._queue.push({
-				event: 'play',
+				event: PLAY,
 				action: () => this.play()
 			});
 		}
@@ -187,11 +214,12 @@ export class Howl {
 
 		// If no audio is available, quit immediately.
 		if (Howler.noAudio) {
-			this._emit('loaderror', null, 'No audio support.');
+			this._emit(LOADERROR, null);
+			console.error('No audio support.');
 		}
 
 		// Make sure our source is in an array.
-		if (typeof this._src === 'string') {
+		if (typeof this._src === STRING) {
 			this._src = [this._src];
 		}
 
@@ -206,8 +234,9 @@ export class Howl {
 			} else {
 				// Make sure the source is a string.
 				str = this._src[i];
-				if (typeof str !== 'string') {
-					this._emit('loaderror', null, 'Non-string found in selected audio sources - ignoring.');
+				if (typeof str !== STRING) {
+					this._emit(LOADERROR, null);
+					console.error('Non-string found in selected audio sources - ignoring.');
 					continue;
 				}
 
@@ -235,11 +264,12 @@ export class Howl {
 		}
 
 		if (!url) {
-			return this._emit('loaderror', null, 'No codec support for selected audio sources.');
+			console.error('No codec support for selected audio sources.');
+			return this._emit(LOADERROR, null);
 		}
 
 		this._src = url;
-		this._state = 'loading';
+		this._state = LOADING;
 
 		// If the hosting page is HTTPS and the source isn't,
 		// drop down to HTML5 Audio to avoid Mixed Content errors.
@@ -253,7 +283,7 @@ export class Howl {
 
 		// Load and decode the audio data for playback.
 		if (this._webAudio) {
-			loadBuffer(this);
+			loadBuffer(this, Howler.ctx);
 		}
 
 		return this;
@@ -272,12 +302,12 @@ export class Howl {
 		if (typeof sprite === 'number') {
 			id = sprite;
 			sprite = null;
-		} else if (typeof sprite === 'string' && this._state === 'loaded' && !this._sprite[sprite]) {
+		} else if (typeof sprite === STRING && this._state === LOADED && !this._sprite[sprite]) {
 			// If the passed sprite doesn't exist, do nothing.
 			return null;
-		} else if (typeof sprite === 'undefined') {
+		} else if (typeof sprite === UNDEFINED) {
 			// Use the default sound sprite (plays the full audio length).
-			sprite = '__default';
+			sprite = DEFAULT;
 
 			// Check if there is a single paused sound that isn't ended.
 			// If there is, play that sound. If not, continue as usual.
@@ -308,13 +338,13 @@ export class Howl {
 
 		// Select the sprite definition.
 		if (id && !sprite) {
-			sprite = sound._sprite || '__default';
+			sprite = sound._sprite || DEFAULT;
 		}
 
 		// If the sound hasn't loaded, we must wait to get the audio's duration.
 		// We also need to wait to make sure we don't run into race conditions with
 		// the order of function calls.
-		if (this._state !== 'loaded') {
+		if (this._state !== LOADED) {
 			// Set the sprite value on this sound.
 			sound._sprite = sprite;
 
@@ -324,7 +354,7 @@ export class Howl {
 			// Add the sound to the queue to be played on load.
 			const soundId = sound._id;
 			this._queue.push({
-				event: 'play',
+				event: PLAY,
 				action: () => this.play(soundId),
 			});
 
@@ -335,7 +365,7 @@ export class Howl {
 		if (id && !sound._paused) {
 			// Trigger the play event, in order to keep iterating through queue.
 			if (!internal) {
-				this._loadQueue('play');
+				this._loadQueue(PLAY);
 			}
 
 			return sound._id;
@@ -375,6 +405,11 @@ export class Howl {
 		// Begin the actual playback.
 		const node = sound._node;
 		if (this._webAudio) {
+			const {
+				ctx,
+				state
+			} = Howler;
+
 			// Fire this when the sound is ready to play to begin Web Audio playback.
 			const playWebAudio = () => {
 				this._playLock = false;
@@ -383,11 +418,11 @@ export class Howl {
 
 				// Setup the playback params.
 				const vol = (sound._muted || this._muted) ? 0 : sound._volume;
-				node.gain.setValueAtTime(vol, Howler.ctx.currentTime);
-				sound._playStart = Howler.ctx.currentTime;
+				node.gain.setValueAtTime(vol, ctx.currentTime);
+				sound._playStart = ctx.currentTime;
 
 				// Play the sound using the supported method.
-				if (typeof node.bufferSource.start === 'undefined') {
+				if (typeof node.bufferSource.start === UNDEFINED) {
 					sound._loop ?
 					node.bufferSource.noteGrainOn(0, seek, 86400) :
 					node.bufferSource.noteGrainOn(0, seek, duration);
@@ -402,19 +437,19 @@ export class Howl {
 
 				if (!internal) {
 					setTimeout(() => {
-						this._emit('play', sound._id);
+						this._emit(PLAY, sound._id);
 						this._loadQueue();
 					}, 0);
 				}
 			};
 
-			if (Howler.state === 'running' && Howler.ctx.state !== 'interrupted') {
+			if (state === RUNNING && ctx.state !== INTERRUPTED) {
 				playWebAudio();
 			} else {
 				this._playLock = true;
 
 				// Wait for the audio context to resume before playing.
-				this.once('resume', playWebAudio);
+				this.once(RESUME, playWebAudio);
 
 				// Cancel the end timer.
 				this._clearTimer(sound._id);
@@ -432,7 +467,7 @@ export class Howl {
 					const play = node.play();
 
 					// Support older browsers that don't support promises, and thus don't have this issue.
-					if (play && typeof Promise !== 'undefined' && (play instanceof Promise || typeof play.then === 'function')) {
+					if (play && typeof Promise !== UNDEFINED && (play instanceof Promise || typeof play.then === FUNCTION)) {
 						// Implements a lock to prevent DOMException: The play() request was interrupted by a call to pause().
 						this._playLock = true;
 
@@ -445,14 +480,15 @@ export class Howl {
 							this._playLock = false;
 							node._unlocked = true;
 							if (!internal) {
-								this._emit('play', sound._id);
+								this._emit(PLAY, sound._id);
 								this._loadQueue();
 							}
 						})
 						.catch(() => {
+							console.error(`Playback was unable to start. This is most commonly an issue
+							on mobile devices and Chrome where playback was not within a user interaction.`);
 							this._playLock = false;
-							this._emit('playerror', sound._id, 'Playback was unable to start. This is most commonly an issue ' +
-								'on mobile devices and Chrome where playback was not within a user interaction.');
+							this._emit(PLAYERROR, sound._id);
 
 							// Reset the ended and paused values.
 							sound._ended = true;
@@ -461,7 +497,7 @@ export class Howl {
 					} else if (!internal) {
 						this._playLock = false;
 						setParams();
-						this._emit('play', sound._id);
+						this._emit(PLAY, sound._id);
 						this._loadQueue();
 					}
 
@@ -470,13 +506,13 @@ export class Howl {
 
 					// If the node is still paused, then we can assume there was a playback issue.
 					if (node.paused) {
-						this._emit('playerror', sound._id, 'Playback was unable to start. This is most commonly an issue ' +
-							'on mobile devices and Chrome where playback was not within a user interaction.');
-						return;
+						console.error(`Playback was unable to start. This is most commonly an issue
+						on mobile devices and Chrome where playback was not within a user interaction.`);
+						return this._emit(PLAYERROR, sound._id);
 					}
 
 					// Setup the end timer on sprites or listen for the ended event.
-					if (sprite !== '__default' || sound._loop) {
+					if (sprite !== DEFAULT || sound._loop) {
 						this._endTimers[sound._id] = setTimeout(() => this._ended(sound), timeout);
 					} else {
 						this._endTimers[sound._id] = () => {
@@ -484,17 +520,17 @@ export class Howl {
 							this._ended(sound);
 
 							// Clear this listener.
-							node.removeEventListener('ended', this._endTimers[sound._id], false);
+							node.removeEventListener(ENDED, this._endTimers[sound._id], false);
 						};
-						node.addEventListener('ended', this._endTimers[sound._id], false);
+						node.addEventListener(ENDED, this._endTimers[sound._id], false);
 					}
 				} catch (err) {
-					this._emit('playerror', sound._id, err);
+					this._emit(PLAYERROR, sound._id, err);
 				}
 			};
 
 			// If this is streaming audio, make sure the src is set and load again.
-			if (node.src === 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA') {
+			if (node.src === NODE_SRC) {
 				node.src = this._src;
 				node.load();
 			}
@@ -530,7 +566,7 @@ export class Howl {
 	 */
 	pause(id) {
 		// If the sound hasn't loaded or a play() promise is pending, add it to the load queue to pause when capable.
-		if (this._state !== 'loaded' || this._playLock) {
+		if (this._state !== LOADED || this._playLock) {
 			this._queue.push({
 				event: 'pause',
 				action: () => this.pause(id)
@@ -565,7 +601,7 @@ export class Howl {
 							continue;
 						}
 
-						if (typeof sound._node.bufferSource.stop === 'undefined') {
+						if (typeof sound._node.bufferSource.stop === UNDEFINED) {
 							sound._node.bufferSource.noteOff(0);
 						} else {
 							sound._node.bufferSource.stop(0);
@@ -596,7 +632,7 @@ export class Howl {
 	 */
 	stop(id, internal) {
 		// If the sound hasn't loaded, add it to the load queue to stop when capable.
-		if (this._state !== 'loaded' || this._playLock) {
+		if (this._state !== LOADED || this._playLock) {
 			this._queue.push({
 				event: 'stop',
 				action: () => this.stop(id)
@@ -629,7 +665,7 @@ export class Howl {
 					if (this._webAudio) {
 						// Make sure the sound's AudioBufferSourceNode has been created.
 						if (sound._node.bufferSource) {
-							if (typeof sound._node.bufferSource.stop === 'undefined') {
+							if (typeof sound._node.bufferSource.stop === UNDEFINED) {
 								sound._node.bufferSource.noteOff(0);
 							} else {
 								sound._node.bufferSource.stop(0);
@@ -666,7 +702,7 @@ export class Howl {
 	 */
 	mute(muted, id) {
 		// If the sound hasn't loaded, add it to the load queue to mute when capable.
-		if (this._state !== 'loaded' || this._playLock) {
+		if (this._state !== LOADED || this._playLock) {
 			this._queue.push({
 				event: 'mute',
 				action: () => this.mute(muted, id)
@@ -676,7 +712,7 @@ export class Howl {
 		}
 
 		// If applying mute/unmute to all sounds, update the group's value.
-		if (typeof id === 'undefined') {
+		if (typeof id === UNDEFINED) {
 			if (typeof muted === 'boolean') {
 				this._muted = muted;
 			} else {
@@ -729,7 +765,7 @@ export class Howl {
 		if (args.length === 0) {
 			// Return the value of the groups' volume.
 			return this._volume;
-		} else if (args.length === 1 || args.length === 2 && typeof args[1] === 'undefined') {
+		} else if (args.length === 1 || args.length === 2 && typeof args[1] === UNDEFINED) {
 			// First check if this is an ID, and if not, assume it is a new volume.
 			const ids = this._getSoundIds();
 			const index = ids.indexOf(args[0]);
@@ -745,11 +781,11 @@ export class Howl {
 
 		// Update the volume or return the current volume.
 		let sound;
-		if (typeof vol !== 'undefined' && vol >= 0 && vol <= 1) {
+		if (typeof vol !== UNDEFINED && vol >= 0 && vol <= 1) {
 			// If the sound hasn't loaded, add it to the load queue to change volume when capable.
-			if (this._state !== 'loaded' || this._playLock) {
+			if (this._state !== LOADED || this._playLock) {
 				this._queue.push({
-					event: 'volume',
+					event: VOLUME,
 					action: () => this.volume(...args)
 				});
 
@@ -757,7 +793,7 @@ export class Howl {
 			}
 
 			// Set the group volume.
-			if (typeof id === 'undefined') {
+			if (typeof id === UNDEFINED) {
 				this._volume = vol;
 			}
 
@@ -781,7 +817,7 @@ export class Howl {
 						sound._node.volume = vol * Howler.volume();
 					}
 
-					this._emit('volume', sound._id);
+					this._emit(VOLUME, sound._id);
 				}
 			}
 		} else {
@@ -802,9 +838,9 @@ export class Howl {
 	 */
 	fade(from, to, len, id) {
 		// If the sound hasn't loaded, add it to the load queue to fade when capable.
-		if (this._state !== 'loaded' || this._playLock) {
+		if (this._state !== LOADED || this._playLock) {
 			this._queue.push({
-				event: 'fade',
+				event: FADE,
 				action: () => this.fade(from, to, len, id)
 			});
 
@@ -841,7 +877,7 @@ export class Howl {
 					sound._node.gain.linearRampToValueAtTime(to, end);
 				}
 
-				this._startFadeInterval(sound, from, to, len, ids[i], typeof id === 'undefined');
+				this._startFadeInterval(sound, from, to, len, ids[i], typeof id === UNDEFINED);
 			}
 		}
 
@@ -862,7 +898,7 @@ export class Howl {
 		}
 
 		// If the sound hasn't loaded, add it to the load queue to change stereo pan when capable.
-		if (this._state !== 'loaded') {
+		if (this._state !== LOADED) {
 			this._queue.push({
 				event: 'stereo',
 				action: () => {
@@ -874,12 +910,12 @@ export class Howl {
 		}
 
 		// Check for PannerStereoNode support and fallback to PannerNode if it doesn't exist.
-		const pannerType = (typeof Howler.ctx.createStereoPanner === 'undefined') ? 'spatial' : 'stereo';
+		const pannerType = (typeof Howler.ctx.createStereoPanner === UNDEFINED) ? 'spatial' : 'stereo';
 
 		// Setup the group's stereo panning if no ID is passed.
-		if (typeof id === 'undefined') {
+		if (typeof id === UNDEFINED) {
 			// Return the group's stereo panning if no parameters are passed.
-			if (typeof pan === 'number') {
+			if (typeof pan === NUMBER) {
 				this._stereo = pan;
 				this._pos = [pan, 0, 0];
 			} else {
@@ -894,29 +930,34 @@ export class Howl {
 			const sound = this._soundById(ids[i]);
 
 			if (sound) {
-				if (typeof pan === 'number') {
+				if (typeof pan === NUMBER) {
 					sound._stereo = pan;
 					sound._pos = [pan, 0, 0];
 
 					if (sound._node) {
+						const {
+							ctx,
+							ctx: { currentTime }
+						} = Howler;
+
 						// If we are falling back, make sure the panningModel is equalpower.
 						sound._pannerAttr.panningModel = 'equalpower';
 
 						// Check if there is a panner setup and create a new one if not.
 						if (!sound._panner || !sound._panner.pan) {
-							setupPanner(sound, pannerType, Howler);
+							setupPanner(sound, pannerType, ctx);
 						}
 
 						if (pannerType === 'spatial') {
-							if (typeof sound._panner.positionX !== 'undefined') {
-								sound._panner.positionX.setValueAtTime(pan, Howler.ctx.currentTime);
-								sound._panner.positionY.setValueAtTime(0, Howler.ctx.currentTime);
-								sound._panner.positionZ.setValueAtTime(0, Howler.ctx.currentTime);
+							if (typeof sound._panner.positionX !== UNDEFINED) {
+								sound._panner.positionX.setValueAtTime(pan, currentTime);
+								sound._panner.positionY.setValueAtTime(0, currentTime);
+								sound._panner.positionZ.setValueAtTime(0, currentTime);
 							} else {
 								sound._panner.setPosition(pan, 0, 0);
 							}
 						} else {
-							sound._panner.pan.setValueAtTime(pan, Howler.ctx.currentTime);
+							sound._panner.pan.setValueAtTime(pan, currentTime);
 						}
 					}
 
@@ -945,7 +986,7 @@ export class Howl {
 		}
 
 		// If the sound hasn't loaded, add it to the load queue to change position when capable.
-		if (this._state !== 'loaded') {
+		if (this._state !== LOADED) {
 			this._queue.push({
 				event: 'pos',
 				action: () => {
@@ -957,13 +998,13 @@ export class Howl {
 		}
 
 		// Set the defaults for optional 'y' & 'z'.
-		y = (typeof y !== 'number') ? 0 : y;
-		z = (typeof z !== 'number') ? -0.5 : z;
+		y = (typeof y !== NUMBER) ? 0 : y;
+		z = (typeof z !== NUMBER) ? -0.5 : z;
 
 		// Setup the group's spatial position if no ID is passed.
-		if (typeof id === 'undefined') {
+		if (typeof id === UNDEFINED) {
 			// Return the group's spatial position if no parameters are passed.
-			if (typeof x === 'number') {
+			if (typeof x === NUMBER) {
 				this._pos = [x, y, z];
 			} else {
 				return this._pos;
@@ -977,19 +1018,24 @@ export class Howl {
 			const sound = this._soundById(ids[i]);
 
 			if (sound) {
-				if (typeof x === 'number') {
+				if (typeof x === NUMBER) {
 					sound._pos = [x, y, z];
 
 					if (sound._node) {
+						const {
+							ctx,
+							ctx: { currentTime }
+						} = Howler;
+
 						// Check if there is a panner setup and create a new one if not.
 						if (!sound._panner || sound._panner.pan) {
-							setupPanner(sound, 'spatial', Howler);
+							setupPanner(sound, 'spatial', ctx);
 						}
 
-						if (typeof sound._panner.positionX !== 'undefined') {
-							sound._panner.positionX.setValueAtTime(x, Howler.ctx.currentTime);
-							sound._panner.positionY.setValueAtTime(y, Howler.ctx.currentTime);
-							sound._panner.positionZ.setValueAtTime(z, Howler.ctx.currentTime);
+						if (typeof sound._panner.positionX !== UNDEFINED) {
+							sound._panner.positionX.setValueAtTime(x, currentTime);
+							sound._panner.positionY.setValueAtTime(y, currentTime);
+							sound._panner.positionZ.setValueAtTime(z, currentTime);
 						} else {
 							sound._panner.setPosition(x, y, z);
 						}
@@ -1022,7 +1068,7 @@ export class Howl {
 		}
 
 		// If the sound hasn't loaded, add it to the load queue to change orientation when capable.
-		if (this._state !== 'loaded') {
+		if (this._state !== LOADED) {
 			this._queue.push({
 				event: 'orientation',
 				action: () => {
@@ -1034,13 +1080,13 @@ export class Howl {
 		}
 
 		// Set the defaults for optional 'y' & 'z'.
-		y = (typeof y !== 'number') ? this._orientation[1] : y;
-		z = (typeof z !== 'number') ? this._orientation[2] : z;
+		y = (typeof y !== NUMBER) ? this._orientation[1] : y;
+		z = (typeof z !== NUMBER) ? this._orientation[2] : z;
 
 		// Setup the group's spatial orientation if no ID is passed.
-		if (typeof id === 'undefined') {
+		if (typeof id === UNDEFINED) {
 			// Return the group's spatial orientation if no parameters are passed.
-			if (typeof x === 'number') {
+			if (typeof x === NUMBER) {
 				this._orientation = [x, y, z];
 			} else {
 				return this._orientation;
@@ -1054,10 +1100,15 @@ export class Howl {
 			const sound = this._soundById(ids[i]);
 
 			if (sound) {
-				if (typeof x === 'number') {
+				if (typeof x === NUMBER) {
 					sound._orientation = [x, y, z];
 
 					if (sound._node) {
+						const {
+							ctx,
+							ctx: { currentTime }
+						} = Howler;
+
 						// Check if there is a panner setup and create a new one if not.
 						if (!sound._panner) {
 							// Make sure we have a position to setup the node with.
@@ -1065,13 +1116,13 @@ export class Howl {
 								sound._pos = this._pos || [0, 0, -0.5];
 							}
 
-							setupPanner(sound, 'spatial');
+							setupPanner(sound, 'spatial', ctx);
 						}
 
-						if (typeof sound._panner.orientationX !== 'undefined') {
-							sound._panner.orientationX.setValueAtTime(x, Howler.ctx.currentTime);
-							sound._panner.orientationY.setValueAtTime(y, Howler.ctx.currentTime);
-							sound._panner.orientationZ.setValueAtTime(z, Howler.ctx.currentTime);
+						if (typeof sound._panner.orientationX !== UNDEFINED) {
+							sound._panner.orientationX.setValueAtTime(x, currentTime);
+							sound._panner.orientationY.setValueAtTime(y, currentTime);
+							sound._panner.orientationZ.setValueAtTime(z, currentTime);
 						} else {
 							sound._panner.setOrientation(x, y, z);
 						}
@@ -1136,7 +1187,7 @@ export class Howl {
 				o = args[0];
 
 				// Set the group's panner attribute values.
-				if (typeof id === 'undefined') {
+				if (typeof id === UNDEFINED) {
 					if (!o.pannerAttr) {
 						o.pannerAttr = {
 							coneInnerAngle: o.coneInnerAngle,
@@ -1151,28 +1202,28 @@ export class Howl {
 					}
 
 					this._pannerAttr = {
-						coneInnerAngle: typeof o.pannerAttr.coneInnerAngle !== 'undefined' ?
+						coneInnerAngle: typeof o.pannerAttr.coneInnerAngle !== UNDEFINED ?
 										o.pannerAttr.coneInnerAngle :
 										this._coneInnerAngle,
-						coneOuterAngle: typeof o.pannerAttr.coneOuterAngle !== 'undefined' ?
+						coneOuterAngle: typeof o.pannerAttr.coneOuterAngle !== UNDEFINED ?
 										o.pannerAttr.coneOuterAngle :
 										this._coneOuterAngle,
-						coneOuterGain: typeof o.pannerAttr.coneOuterGain !== 'undefined' ?
+						coneOuterGain: typeof o.pannerAttr.coneOuterGain !== UNDEFINED ?
 									   o.pannerAttr.coneOuterGain :
 									   this._coneOuterGain,
-						distanceModel: typeof o.pannerAttr.distanceModel !== 'undefined' ?
+						distanceModel: typeof o.pannerAttr.distanceModel !== UNDEFINED ?
 									   o.pannerAttr.distanceModel :
 									   this._distanceModel,
-						maxDistance: typeof o.pannerAttr.maxDistance !== 'undefined' ?
+						maxDistance: typeof o.pannerAttr.maxDistance !== UNDEFINED ?
 									 o.pannerAttr.maxDistance :
 									 this._maxDistance,
-						refDistance: typeof o.pannerAttr.refDistance !== 'undefined' ?
+						refDistance: typeof o.pannerAttr.refDistance !== UNDEFINED ?
 									 o.pannerAttr.refDistance :
 									 this._refDistance,
-						rolloffFactor: typeof o.pannerAttr.rolloffFactor !== 'undefined' ?
+						rolloffFactor: typeof o.pannerAttr.rolloffFactor !== UNDEFINED ?
 									   o.pannerAttr.rolloffFactor :
 									   this._rolloffFactor,
-						panningModel: typeof o.pannerAttr.panningModel !== 'undefined' ?
+						panningModel: typeof o.pannerAttr.panningModel !== UNDEFINED ?
 									  o.pannerAttr.panningModel :
 									  this._panningModel
 					};
@@ -1196,14 +1247,14 @@ export class Howl {
 				// Merge the new values into the sound.
 				let pa = sound._pannerAttr;
 				pa = {
-					coneInnerAngle: typeof o.coneInnerAngle !== 'undefined' ? o.coneInnerAngle : pa.coneInnerAngle,
-					coneOuterAngle: typeof o.coneOuterAngle !== 'undefined' ? o.coneOuterAngle : pa.coneOuterAngle,
-					coneOuterGain: typeof o.coneOuterGain !== 'undefined' ? o.coneOuterGain : pa.coneOuterGain,
-					distanceModel: typeof o.distanceModel !== 'undefined' ? o.distanceModel : pa.distanceModel,
-					maxDistance: typeof o.maxDistance !== 'undefined' ? o.maxDistance : pa.maxDistance,
-					refDistance: typeof o.refDistance !== 'undefined' ? o.refDistance : pa.refDistance,
-					rolloffFactor: typeof o.rolloffFactor !== 'undefined' ? o.rolloffFactor : pa.rolloffFactor,
-					panningModel: typeof o.panningModel !== 'undefined' ? o.panningModel : pa.panningModel
+					coneInnerAngle: typeof o.coneInnerAngle !== UNDEFINED ? o.coneInnerAngle : pa.coneInnerAngle,
+					coneOuterAngle: typeof o.coneOuterAngle !== UNDEFINED ? o.coneOuterAngle : pa.coneOuterAngle,
+					coneOuterGain: typeof o.coneOuterGain !== UNDEFINED ? o.coneOuterGain : pa.coneOuterGain,
+					distanceModel: typeof o.distanceModel !== UNDEFINED ? o.distanceModel : pa.distanceModel,
+					maxDistance: typeof o.maxDistance !== UNDEFINED ? o.maxDistance : pa.maxDistance,
+					refDistance: typeof o.refDistance !== UNDEFINED ? o.refDistance : pa.refDistance,
+					rolloffFactor: typeof o.rolloffFactor !== UNDEFINED ? o.rolloffFactor : pa.rolloffFactor,
+					panningModel: typeof o.panningModel !== UNDEFINED ? o.panningModel : pa.panningModel
 				};
 
 				// Update the panner values or create a new panner if none exists.
@@ -1224,7 +1275,7 @@ export class Howl {
 					}
 
 					// Create a new panner node.
-					setupPanner(sound, 'spatial');
+					setupPanner(sound, 'spatial', Howler.ctx);
 				}
 			}
 		}
@@ -1286,7 +1337,7 @@ export class Howl {
 				sound._interval = null;
 				sound._fadeTo = null;
 				this.volume(to, sound._id);
-				this._emit('fade', sound._id);
+				this._emit(FADE, sound._id);
 			}
 		}, stepLen);
 	}
@@ -1309,7 +1360,7 @@ export class Howl {
 			sound._interval = null;
 			this.volume(sound._fadeTo, id);
 			sound._fadeTo = null;
-			this._emit('fade', id);
+			this._emit(FADE, id);
 		}
 
 		return this;
@@ -1404,11 +1455,11 @@ export class Howl {
 
 		// Update the playback rate or return the current value.
 		let sound;
-		if (typeof rate === 'number') {
+		if (typeof rate === NUMBER) {
 			// If the sound hasn't loaded, add it to the load queue to change playback rate when capable.
-			if (this._state !== 'loaded' || this._playLock) {
+			if (this._state !== LOADED || this._playLock) {
 				this._queue.push({
-					event: 'rate',
+					event: RATE,
 					action: () => this.rate(...args)
 				});
 
@@ -1416,7 +1467,7 @@ export class Howl {
 			}
 
 			// Set the group rate.
-			if (typeof id === 'undefined') {
+			if (typeof id === UNDEFINED) {
 				this._rate = rate;
 			}
 
@@ -1453,7 +1504,7 @@ export class Howl {
 						this._endTimers[id[i]] = setTimeout(() => this._ended(sound), timeout);
 					}
 
-					this._emit('rate', sound._id);
+					this._emit(RATE, sound._id);
 				}
 			}
 		} else {
@@ -1498,14 +1549,14 @@ export class Howl {
 		}
 
 		// If there is no ID, bail out.
-		if (typeof id === 'undefined') {
+		if (typeof id === UNDEFINED) {
 			return 0;
 		}
 
 		// If the sound hasn't loaded, add it to the load queue to seek when capable.
-		if (typeof seek === 'number' && (this._state !== 'loaded' || this._playLock)) {
+		if (typeof seek === NUMBER && (this._state !== LOADED || this._playLock)) {
 			this._queue.push({
-				event: 'seek',
+				event: SEEK,
 				action: () => this.seek(...args)
 			});
 
@@ -1516,7 +1567,7 @@ export class Howl {
 		const sound = this._soundById(id);
 
 		if (sound) {
-			if (typeof seek === 'number' && seek >= 0) {
+			if (typeof seek === NUMBER && seek >= 0) {
 				// Pause the sound and update position for restarting playback.
 				const playing = this.playing(id);
 				if (playing) {
@@ -1535,7 +1586,7 @@ export class Howl {
 
 				// Seek and emit when ready.
 				const seekAndEmit = () => {
-					this._emit('seek', id);
+					this._emit(SEEK, id);
 
 					// Restart the playback if the sound was playing.
 					if (playing) {
@@ -1577,7 +1628,7 @@ export class Howl {
 	 */
 	playing(id) {
 		// Check the passed sound ID (if any).
-		if (typeof id === 'number') {
+		if (typeof id === NUMBER) {
 			const sound = this._soundById(id);
 			return sound ? !sound._paused : false;
 		}
@@ -1636,9 +1687,9 @@ export class Howl {
 				this._clearSound(sounds[i]._node);
 
 				// Remove any event listeners.
-				sounds[i]._node.removeEventListener('error', sounds[i]._errorFn, false);
+				sounds[i]._node.removeEventListener(ERROR, sounds[i]._errorFn, false);
 				sounds[i]._node.removeEventListener(Howler._canPlayEvent, sounds[i]._loadFn, false);
-				sounds[i]._node.removeEventListener('ended', sounds[i]._endFn, false);
+				sounds[i]._node.removeEventListener(ENDED, sounds[i]._endFn, false);
 
 				// Release the Audio object back to the pool.
 				Howler._releaseHtml5Audio(sounds[i]._node);
@@ -1674,7 +1725,7 @@ export class Howl {
 		Howler.noAudio = false;
 
 		// Clear out `this`.
-		this._state = 'unloaded';
+		this._state = UNLOADED;
 		this._sounds = [];
 
 		return null;
@@ -1689,9 +1740,9 @@ export class Howl {
 	 * @return {Howl}
 	 */
 	on(event, fn, id, once) {
-		const events = this[`_on${ event }`];
+		const events = this[`${ON}${ event }`];
 
-		if (typeof fn === 'function') {
+		if (typeof fn === FUNCTION) {
 			events.push(once ?
 				{
 					id: id,
@@ -1715,11 +1766,11 @@ export class Howl {
 	 * @return {Howl}
 	 */
 	off(event, fn, id) {
-		const events = this[`_on${ event }`];
+		const events = this[`${ON}${ event }`];
 		let i = 0;
 
 		// Allow passing just an event and ID.
-		if (typeof fn === 'number') {
+		if (typeof fn === NUMBER) {
 			id = fn;
 			fn = null;
 		}
@@ -1735,12 +1786,12 @@ export class Howl {
 			}
 		} else if (event) {
 			// Clear out all events of this type.
-			this['_on' + event] = [];
+			this[`${ON}${event}`] = [];
 		} else {
 			// Clear out all events of every type.
 			const keys = Object.keys(this);
 			for (i = 0; i < keys.length; i++) {
-				if ((keys[i].indexOf('_on') === 0) && Array.isArray(this[keys[i]])) {
+				if ((keys[i].indexOf(ON) === 0) && Array.isArray(this[keys[i]])) {
 					this[keys[i]] = [];
 				}
 			}
@@ -1770,13 +1821,13 @@ export class Howl {
 	 * @param  {string} msg   Message to go with event.
 	 * @return {Howl}
 	 */
-	_emit(event, id, msg) {
-		const events = this[`_on${ event }`];
+	_emit(event, id, msg = '') {
+		const events = this[`${ON}${ event }`];
 
 		// Loop through event store and fire all functions.
 		for (let i = events.length - 1; i >= 0; i--) {
 			// Only fire the listener if the correct ID is used.
-			if (!events[i].id || events[i].id === id || event === 'load') {
+			if (!events[i].id || events[i].id === id || event === LOAD) {
 				const { fn } = events[i];
 				setTimeout(
 					() => fn.call(this, id, msg),
@@ -1837,7 +1888,7 @@ export class Howl {
 		const loop = !!(sound._loop || this._sprite[sprite][2]);
 
 		// Fire the ended event.
-		this._emit('end', sound._id);
+		this._emit(END, sound._id);
 
 		// Restart the playback for HTML5 Audio loop.
 		if (!this._webAudio && loop) {
@@ -1846,7 +1897,7 @@ export class Howl {
 
 		// Restart this timer if on a Web Audio loop.
 		if (this._webAudio && loop) {
-			this._emit('play', sound._id);
+			this._emit(PLAY, sound._id);
 			sound._seek = sound._start || 0;
 			sound._rateSeek = 0;
 			sound._playStart = Howler.ctx.currentTime;
@@ -1886,12 +1937,12 @@ export class Howl {
 	_clearTimer(id) {
 		if (this._endTimers[id]) {
 			// Clear the timeout or remove the ended listener.
-			if (typeof this._endTimers[id] !== 'function') {
+			if (typeof this._endTimers[id] !== FUNCTION) {
 				clearTimeout(this._endTimers[id]);
 			} else {
 				const sound = this._soundById(id);
 				if (sound && sound._node) {
-					sound._node.removeEventListener('ended', this._endTimers[id], false);
+					sound._node.removeEventListener(ENDED, this._endTimers[id], false);
 				}
 			}
 
@@ -1980,7 +2031,7 @@ export class Howl {
 	 * @return {Array}    Array of IDs.
 	 */
 	_getSoundIds(id) {
-		if (typeof id === 'undefined') {
+		if (typeof id === UNDEFINED) {
 			const ids = [];
 			for (let i = 0; i < this._sounds.length; i++) {
 				ids.push(this._sounds[i]._id);
@@ -2062,7 +2113,7 @@ export class Howl {
 	_clearSound(node) {
 		const checkIE = /MSIE |Trident\//.test(Howler._navigator && Howler._navigator.userAgent);
 		if (!checkIE) {
-			node.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+			node.src = NODE_SRC;
 		}
 	}
 }
