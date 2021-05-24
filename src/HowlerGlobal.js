@@ -5,6 +5,9 @@ import { setupAudioContext } from './utils/setupAudioContext';
  * to all sounds that are currently playing or will be in the future.
  */
 export class HowlerGlobal {
+	_pos = [0, 0, 0];
+	_orientation = [0, 0, -1, 0, 1, 0];
+
 	constructor() {
 		this.init();
 	}
@@ -93,6 +96,110 @@ export class HowlerGlobal {
 
 		return this._volume;
 	}
+
+
+	/**
+	 * Helper method to update the stereo panning position of all current Howls.
+	 * Future Howls will not use this value unless explicitly set.
+	 * @param  {Number} pan A value of -1.0 is all the way left and 1.0 is all the way right.
+	 * @return {Howler/Number}     This or current stereo panning value.
+	 */
+	stereo(pan) {
+		// Stop right here if not using Web Audio.
+		if (!this.ctx || !this.ctx.listener) {
+			return this;
+		}
+
+		// Loop through all Howls and update their stereo panning.
+		for (let i = this._howls.length - 1; i >= 0; i--) {
+			this._howls[i].stereo(pan);
+		}
+
+		return this;
+	};
+
+	/**
+	 * Get/set the position of the listener in 3D cartesian space. Sounds using
+	 * 3D position will be relative to the listener's position.
+	 * @param  {Number} x The x-position of the listener.
+	 * @param  {Number} y The y-position of the listener.
+	 * @param  {Number} z The z-position of the listener.
+	 * @return {Howler/Array}   This or current listener position.
+	 */
+	pos(x, y, z) {
+		// Stop right here if not using Web Audio.
+		if (!this.ctx || !this.ctx.listener) {
+			return this;
+		}
+
+		// Set the defaults for optional 'y' & 'z'.
+		y = (typeof y !== 'number') ? this._pos[1] : y;
+		z = (typeof z !== 'number') ? this._pos[2] : z;
+
+		if (typeof x === 'number') {
+			this._pos = [x, y, z];
+
+			if (typeof this.ctx.listener.positionX !== 'undefined') {
+				this.ctx.listener.positionX.setTargetAtTime(this._pos[0], Howler.ctx.currentTime, 0.1);
+				this.ctx.listener.positionY.setTargetAtTime(this._pos[1], Howler.ctx.currentTime, 0.1);
+				this.ctx.listener.positionZ.setTargetAtTime(this._pos[2], Howler.ctx.currentTime, 0.1);
+			} else {
+				this.ctx.listener.setPosition(this._pos[0], this._pos[1], this._pos[2]);
+			}
+		} else {
+			return this._pos;
+		}
+
+		return this;
+	};
+
+	/**
+	 * Get/set the direction the listener is pointing in the 3D cartesian space.
+	 * A front and up vector must be provided. The front is the direction the
+	 * face of the listener is pointing, and up is the direction the top of the
+	 * listener is pointing. Thus, these values are expected to be at right angles
+	 * from each other.
+	 * @param  {Number} x   The x-orientation of the listener.
+	 * @param  {Number} y   The y-orientation of the listener.
+	 * @param  {Number} z   The z-orientation of the listener.
+	 * @param  {Number} xUp The x-orientation of the top of the listener.
+	 * @param  {Number} yUp The y-orientation of the top of the listener.
+	 * @param  {Number} zUp The z-orientation of the top of the listener.
+	 * @return {Howler/Array}     Returns this or the current orientation vectors.
+	 */
+	orientation(x, y, z, xUp, yUp, zUp) {
+		// Stop right here if not using Web Audio.
+		if (!this.ctx || !this.ctx.listener) {
+			return this;
+		}
+
+		// Set the defaults for optional 'y' & 'z'.
+		const or = this._orientation;
+		y = (typeof y !== 'number') ? or[1] : y;
+		z = (typeof z !== 'number') ? or[2] : z;
+		xUp = (typeof xUp !== 'number') ? or[3] : xUp;
+		yUp = (typeof yUp !== 'number') ? or[4] : yUp;
+		zUp = (typeof zUp !== 'number') ? or[5] : zUp;
+
+		if (typeof x === 'number') {
+			this._orientation = [x, y, z, xUp, yUp, zUp];
+
+			if (typeof this.ctx.listener.forwardX !== 'undefined') {
+				this.ctx.listener.forwardX.setTargetAtTime(x, Howler.ctx.currentTime, 0.1);
+				this.ctx.listener.forwardY.setTargetAtTime(y, Howler.ctx.currentTime, 0.1);
+				this.ctx.listener.forwardZ.setTargetAtTime(z, Howler.ctx.currentTime, 0.1);
+				this.ctx.listener.upX.setTargetAtTime(xUp, Howler.ctx.currentTime, 0.1);
+				this.ctx.listener.upY.setTargetAtTime(yUp, Howler.ctx.currentTime, 0.1);
+				this.ctx.listener.upZ.setTargetAtTime(zUp, Howler.ctx.currentTime, 0.1);
+			} else {
+				this.ctx.listener.setOrientation(x, y, z, xUp, yUp, zUp);
+			}
+		} else {
+			return or;
+		}
+
+		return this;
+	};
 
 	/**
 	 * Handle muting and unmuting globally.
@@ -482,9 +589,7 @@ export class HowlerGlobal {
 			if (this.state === 'running' && this.ctx.state !== 'interrupted' && this._suspendTimer) {
 				clearTimeout(this._suspendTimer);
 				this._suspendTimer = null;
-			}
-
-			else if (this.state === 'suspended' || this.state === 'running' && this.ctx.state === 'interrupted') {
+			} else if (this.state === 'suspended' || this.state === 'running' && this.ctx.state === 'interrupted') {
 				this.ctx.resume().then(() => {
 					this.state = 'running';
 
@@ -498,9 +603,7 @@ export class HowlerGlobal {
 					clearTimeout(this._suspendTimer);
 					this._suspendTimer = null;
 				}
-			}
-
-			else if (this.state === 'suspending') {
+			} else if (this.state === 'suspending') {
 				this._resumeAfterSuspend = true;
 			}
 

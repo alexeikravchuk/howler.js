@@ -28,7 +28,7 @@ export function loadBuffer(howl) {
 
 		decodeAudioData(dataView.buffer, howl);
 	} else {
-		console.error('Loading the buffer from the URL not supported', url);
+		console.error('Loading a buffer from a URL is not supported', url);
 	}
 }
 

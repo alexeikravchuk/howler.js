@@ -1,6 +1,7 @@
 import { Howler } from './HowlerGlobal';
 import { Sound } from './Sound';
 import { setupAudioContext } from './utils/setupAudioContext';
+import { setupPanner } from './utils/setupPanner';
 import {
 	cache,
 	loadBuffer
@@ -22,6 +23,9 @@ export class Howl {
 	 * @param {object} o.sprite
 	 * @param {Array<string>|string} o.src
 	 * @param {number} o.volume
+	 * @param {Array<number>} o.orientation The direction the audio source is pointing in the 3D cartesian coordinate space
+	 * @param {Number} o.stereo  The stereo panning value of the audio source for this sound or group
+	 * @param {Array<number>} o.pos  The 3D spatial position of the audio source for this sound or group relative to the global listener
 	 * @param {Function} o.onend callback function
 	 * @param {Function} o.onfade callback function
 	 * @param {Function} o.onload callback function
@@ -35,8 +39,10 @@ export class Howl {
 	 * @param {Function} o.onrate callback function
 	 * @param {Function} o.onseek callback function
 	 * @param {Function} o.onunlock callback function
+	 * @param {Function} o.onstereo Fires when the current sound has the stereo panning changed. The first parameter is the ID of the sound.
+	 * @param {Function} o.onpos Fires when the current sound has the listener position changed. The first parameter is the ID of the sound.
+	 * @param {Function} o.onorientation Fires when the current sound has the direction of the listener changed. The first parameter is the ID of the sound.
 	 */
-
 	constructor(o) {
 		// Throw an error if no source is provided./**
 		if (!o.src || o.src.length === 0) {
@@ -65,6 +71,9 @@ export class Howl {
 			sprite = {},
 			src,
 			volume = 1,
+			orientation = [1, 0, 0],
+			stereo = null,
+			pos = null,
 			onend,
 			onfade,
 			onload,
@@ -77,13 +86,31 @@ export class Howl {
 			onvolume,
 			onrate,
 			onseek,
-			onunlock
+			onunlock,
+			onstereo,
+			onpos,
+			onorientation
 		} = o;
 
 		// If we don't have an AudioContext created yet, run the setup.
 		!Howler.ctx && setupAudioContext(Howler);
 
 		// Setup user-defined default properties.
+		this._orientation = orientation;
+		this._stereo = stereo;
+		this._pos = pos;
+		this._pannerAttr = {
+			coneInnerAngle: typeof o.coneInnerAngle !== 'undefined' ? o.coneInnerAngle : 360,
+			coneOuterAngle: typeof o.coneOuterAngle !== 'undefined' ? o.coneOuterAngle : 360,
+			coneOuterGain: typeof o.coneOuterGain !== 'undefined' ? o.coneOuterGain : 0,
+			distanceModel: typeof o.distanceModel !== 'undefined' ? o.distanceModel : 'inverse',
+			maxDistance: typeof o.maxDistance !== 'undefined' ? o.maxDistance : 10000,
+			panningModel: typeof o.panningModel !== 'undefined' ? o.panningModel : 'HRTF',
+			refDistance: typeof o.refDistance !== 'undefined' ? o.refDistance : 1,
+			rolloffFactor: typeof o.rolloffFactor !== 'undefined' ? o.rolloffFactor : 1
+		};
+
+
 		this._autoplay = autoplay;
 		this._format = (typeof format !== 'string') ? format : [format];
 		this._html5 = html5;
@@ -105,6 +132,9 @@ export class Howl {
 		this._playLock = false;
 
 		// Setup event listeners.
+		this._onstereo = onstereo ? [{ fn: onstereo }] : [];
+		this._onpos = onpos ? [{ fn: onpos }] : [];
+		this._onorientation = onorientation ? [{ fn: onorientation }] : [];
 		this._onend = onend ? [{ fn: onend }] : [];
 		this._onfade = onfade ? [{ fn: onfade }] : [];
 		this._onload = onload ? [{ fn: onload }] : [];
@@ -139,7 +169,7 @@ export class Howl {
 			});
 		}
 
-// Load the source file unless otherwise specified.
+		// Load the source file unless otherwise specified.
 		if (this._preload && this._preload !== 'none') {
 			this.load();
 		}
@@ -812,6 +842,390 @@ export class Howl {
 				}
 
 				this._startFadeInterval(sound, from, to, len, ids[i], typeof id === 'undefined');
+			}
+		}
+
+		return this;
+	}
+
+
+	/**
+	 * Get/set the stereo panning of the audio source for this sound or all in the group.
+	 * @param  {Number} pan  A value of -1.0 is all the way left and 1.0 is all the way right.
+	 * @param  {Number} id (optional) The sound ID. If none is passed, all in group will be updated.
+	 * @return {Howl/Number}    Returns this or the current stereo panning value.
+	 */
+	stereo(pan, id) {
+		// Stop right here if not using Web Audio.
+		if (!this._webAudio) {
+			return this;
+		}
+
+		// If the sound hasn't loaded, add it to the load queue to change stereo pan when capable.
+		if (this._state !== 'loaded') {
+			this._queue.push({
+				event: 'stereo',
+				action: () => {
+					this.stereo(pan, id);
+				}
+			});
+
+			return this;
+		}
+
+		// Check for PannerStereoNode support and fallback to PannerNode if it doesn't exist.
+		const pannerType = (typeof Howler.ctx.createStereoPanner === 'undefined') ? 'spatial' : 'stereo';
+
+		// Setup the group's stereo panning if no ID is passed.
+		if (typeof id === 'undefined') {
+			// Return the group's stereo panning if no parameters are passed.
+			if (typeof pan === 'number') {
+				this._stereo = pan;
+				this._pos = [pan, 0, 0];
+			} else {
+				return this._stereo;
+			}
+		}
+
+		// Change the stereo panning of one or all sounds in group.
+		const ids = this._getSoundIds(id);
+		for (let i = 0; i < ids.length; i++) {
+			// Get the sound.
+			const sound = this._soundById(ids[i]);
+
+			if (sound) {
+				if (typeof pan === 'number') {
+					sound._stereo = pan;
+					sound._pos = [pan, 0, 0];
+
+					if (sound._node) {
+						// If we are falling back, make sure the panningModel is equalpower.
+						sound._pannerAttr.panningModel = 'equalpower';
+
+						// Check if there is a panner setup and create a new one if not.
+						if (!sound._panner || !sound._panner.pan) {
+							setupPanner(sound, pannerType, Howler);
+						}
+
+						if (pannerType === 'spatial') {
+							if (typeof sound._panner.positionX !== 'undefined') {
+								sound._panner.positionX.setValueAtTime(pan, Howler.ctx.currentTime);
+								sound._panner.positionY.setValueAtTime(0, Howler.ctx.currentTime);
+								sound._panner.positionZ.setValueAtTime(0, Howler.ctx.currentTime);
+							} else {
+								sound._panner.setPosition(pan, 0, 0);
+							}
+						} else {
+							sound._panner.pan.setValueAtTime(pan, Howler.ctx.currentTime);
+						}
+					}
+
+					this._emit('stereo', sound._id);
+				} else {
+					return sound._stereo;
+				}
+			}
+		}
+
+		return this;
+	};
+
+	/**
+	 * Get/set the 3D spatial position of the audio source for this sound or group relative to the global listener.
+	 * @param  {Number} x  The x-position of the audio source.
+	 * @param  {Number} y  The y-position of the audio source.
+	 * @param  {Number} z  The z-position of the audio source.
+	 * @param  {Number} id (optional) The sound ID. If none is passed, all in group will be updated.
+	 * @return {Howl/Array}    Returns this or the current 3D spatial position: [x, y, z].
+	 */
+	pos(x, y, z, id) {
+		// Stop right here if not using Web Audio.
+		if (!this._webAudio) {
+			return this;
+		}
+
+		// If the sound hasn't loaded, add it to the load queue to change position when capable.
+		if (this._state !== 'loaded') {
+			this._queue.push({
+				event: 'pos',
+				action: () => {
+					this.pos(x, y, z, id);
+				}
+			});
+
+			return this;
+		}
+
+		// Set the defaults for optional 'y' & 'z'.
+		y = (typeof y !== 'number') ? 0 : y;
+		z = (typeof z !== 'number') ? -0.5 : z;
+
+		// Setup the group's spatial position if no ID is passed.
+		if (typeof id === 'undefined') {
+			// Return the group's spatial position if no parameters are passed.
+			if (typeof x === 'number') {
+				this._pos = [x, y, z];
+			} else {
+				return this._pos;
+			}
+		}
+
+		// Change the spatial position of one or all sounds in group.
+		const ids = this._getSoundIds(id);
+		for (let i = 0; i < ids.length; i++) {
+			// Get the sound.
+			const sound = this._soundById(ids[i]);
+
+			if (sound) {
+				if (typeof x === 'number') {
+					sound._pos = [x, y, z];
+
+					if (sound._node) {
+						// Check if there is a panner setup and create a new one if not.
+						if (!sound._panner || sound._panner.pan) {
+							setupPanner(sound, 'spatial', Howler);
+						}
+
+						if (typeof sound._panner.positionX !== 'undefined') {
+							sound._panner.positionX.setValueAtTime(x, Howler.ctx.currentTime);
+							sound._panner.positionY.setValueAtTime(y, Howler.ctx.currentTime);
+							sound._panner.positionZ.setValueAtTime(z, Howler.ctx.currentTime);
+						} else {
+							sound._panner.setPosition(x, y, z);
+						}
+					}
+
+					this._emit('pos', sound._id);
+				} else {
+					return sound._pos;
+				}
+			}
+		}
+
+		return this;
+	}
+
+	/**
+	 * Get/set the direction the audio source is pointing in the 3D cartesian coordinate
+	 * space. Depending on how direction the sound is, based on the `cone` attributes,
+	 * a sound pointing away from the listener can be quiet or silent.
+	 * @param  {Number} x  The x-orientation of the source.
+	 * @param  {Number} y  The y-orientation of the source.
+	 * @param  {Number} z  The z-orientation of the source.
+	 * @param  {Number} id (optional) The sound ID. If none is passed, all in group will be updated.
+	 * @return {Howl/Array}    Returns this or the current 3D spatial orientation: [x, y, z].
+	 */
+	orientation(x, y, z, id) {
+		// Stop right here if not using Web Audio.
+		if (!this._webAudio) {
+			return this;
+		}
+
+		// If the sound hasn't loaded, add it to the load queue to change orientation when capable.
+		if (this._state !== 'loaded') {
+			this._queue.push({
+				event: 'orientation',
+				action: () => {
+					this.orientation(x, y, z, id);
+				}
+			});
+
+			return this;
+		}
+
+		// Set the defaults for optional 'y' & 'z'.
+		y = (typeof y !== 'number') ? this._orientation[1] : y;
+		z = (typeof z !== 'number') ? this._orientation[2] : z;
+
+		// Setup the group's spatial orientation if no ID is passed.
+		if (typeof id === 'undefined') {
+			// Return the group's spatial orientation if no parameters are passed.
+			if (typeof x === 'number') {
+				this._orientation = [x, y, z];
+			} else {
+				return this._orientation;
+			}
+		}
+
+		// Change the spatial orientation of one or all sounds in group.
+		const ids = this._getSoundIds(id);
+		for (let i = 0; i < ids.length; i++) {
+			// Get the sound.
+			const sound = this._soundById(ids[i]);
+
+			if (sound) {
+				if (typeof x === 'number') {
+					sound._orientation = [x, y, z];
+
+					if (sound._node) {
+						// Check if there is a panner setup and create a new one if not.
+						if (!sound._panner) {
+							// Make sure we have a position to setup the node with.
+							if (!sound._pos) {
+								sound._pos = this._pos || [0, 0, -0.5];
+							}
+
+							setupPanner(sound, 'spatial');
+						}
+
+						if (typeof sound._panner.orientationX !== 'undefined') {
+							sound._panner.orientationX.setValueAtTime(x, Howler.ctx.currentTime);
+							sound._panner.orientationY.setValueAtTime(y, Howler.ctx.currentTime);
+							sound._panner.orientationZ.setValueAtTime(z, Howler.ctx.currentTime);
+						} else {
+							sound._panner.setOrientation(x, y, z);
+						}
+					}
+
+					this._emit('orientation', sound._id);
+				} else {
+					return sound._orientation;
+				}
+			}
+		}
+
+		return this;
+	};
+
+	/**
+	 * Get/set the panner node's attributes for a sound or group of sounds.
+	 * This method can optionall take 0, 1 or 2 arguments.
+	 *   pannerAttr() -> Returns the group's values.
+	 *   pannerAttr(id) -> Returns the sound id's values.
+	 *   pannerAttr(o) -> Set's the values of all sounds in this Howl group.
+	 *   pannerAttr(o, id) -> Set's the values of passed sound id.
+	 *
+	 *   Attributes:
+	 *     coneInnerAngle - (360 by default) A parameter for directional audio sources, this is an angle, in degrees,
+	 *                      inside of which there will be no volume reduction.
+	 *     coneOuterAngle - (360 by default) A parameter for directional audio sources, this is an angle, in degrees,
+	 *                      outside of which the volume will be reduced to a constant value of `coneOuterGain`.
+	 *     coneOuterGain - (0 by default) A parameter for directional audio sources, this is the gain outside of the
+	 *                     `coneOuterAngle`. It is a linear value in the range `[0, 1]`.
+	 *     distanceModel - ('inverse' by default) Determines algorithm used to reduce volume as audio moves away from
+	 *                     listener. Can be `linear`, `inverse` or `exponential.
+	 *     maxDistance - (10000 by default) The maximum distance between source and listener, after which the volume
+	 *                   will not be reduced any further.
+	 *     refDistance - (1 by default) A reference distance for reducing volume as source moves further from the listener.
+	 *                   This is simply a variable of the distance model and has a different effect depending on which model
+	 *                   is used and the scale of your coordinates. Generally, volume will be equal to 1 at this distance.
+	 *     rolloffFactor - (1 by default) How quickly the volume reduces as source moves from listener. This is simply a
+	 *                     variable of the distance model and can be in the range of `[0, 1]` with `linear` and `[0, ∞]`
+	 *                     with `inverse` and `exponential`.
+	 *     panningModel - ('HRTF' by default) Determines which spatialization algorithm is used to position audio.
+	 *                     Can be `HRTF` or `equalpower`.
+	 *
+	 * @return {Howl/Object} Returns this or current panner attributes.
+	 */
+	pannerAttr(...args) {
+		let o,
+			id,
+			sound;
+
+		// Stop right here if not using Web Audio.
+		if (!this._webAudio) {
+			return this;
+		}
+
+		// Determine the values based on arguments.
+		if (args.length === 0) {
+			// Return the group's panner attribute values.
+			return this._pannerAttr;
+		} else if (args.length === 1) {
+			if (typeof args[0] === 'object') {
+				o = args[0];
+
+				// Set the group's panner attribute values.
+				if (typeof id === 'undefined') {
+					if (!o.pannerAttr) {
+						o.pannerAttr = {
+							coneInnerAngle: o.coneInnerAngle,
+							coneOuterAngle: o.coneOuterAngle,
+							coneOuterGain: o.coneOuterGain,
+							distanceModel: o.distanceModel,
+							maxDistance: o.maxDistance,
+							refDistance: o.refDistance,
+							rolloffFactor: o.rolloffFactor,
+							panningModel: o.panningModel
+						};
+					}
+
+					this._pannerAttr = {
+						coneInnerAngle: typeof o.pannerAttr.coneInnerAngle !== 'undefined' ?
+										o.pannerAttr.coneInnerAngle :
+										this._coneInnerAngle,
+						coneOuterAngle: typeof o.pannerAttr.coneOuterAngle !== 'undefined' ?
+										o.pannerAttr.coneOuterAngle :
+										this._coneOuterAngle,
+						coneOuterGain: typeof o.pannerAttr.coneOuterGain !== 'undefined' ?
+									   o.pannerAttr.coneOuterGain :
+									   this._coneOuterGain,
+						distanceModel: typeof o.pannerAttr.distanceModel !== 'undefined' ?
+									   o.pannerAttr.distanceModel :
+									   this._distanceModel,
+						maxDistance: typeof o.pannerAttr.maxDistance !== 'undefined' ?
+									 o.pannerAttr.maxDistance :
+									 this._maxDistance,
+						refDistance: typeof o.pannerAttr.refDistance !== 'undefined' ?
+									 o.pannerAttr.refDistance :
+									 this._refDistance,
+						rolloffFactor: typeof o.pannerAttr.rolloffFactor !== 'undefined' ?
+									   o.pannerAttr.rolloffFactor :
+									   this._rolloffFactor,
+						panningModel: typeof o.pannerAttr.panningModel !== 'undefined' ?
+									  o.pannerAttr.panningModel :
+									  this._panningModel
+					};
+				}
+			} else {
+				// Return this sound's panner attribute values.
+				sound = this._soundById(parseInt(args[0], 10));
+				return sound ? sound._pannerAttr : this._pannerAttr;
+			}
+		} else if (args.length === 2) {
+			o = args[0];
+			id = parseInt(args[1], 10);
+		}
+
+		// Update the values of the specified sounds.
+		const ids = this._getSoundIds(id);
+		for (let i = 0; i < ids.length; i++) {
+			sound = this._soundById(ids[i]);
+
+			if (sound) {
+				// Merge the new values into the sound.
+				let pa = sound._pannerAttr;
+				pa = {
+					coneInnerAngle: typeof o.coneInnerAngle !== 'undefined' ? o.coneInnerAngle : pa.coneInnerAngle,
+					coneOuterAngle: typeof o.coneOuterAngle !== 'undefined' ? o.coneOuterAngle : pa.coneOuterAngle,
+					coneOuterGain: typeof o.coneOuterGain !== 'undefined' ? o.coneOuterGain : pa.coneOuterGain,
+					distanceModel: typeof o.distanceModel !== 'undefined' ? o.distanceModel : pa.distanceModel,
+					maxDistance: typeof o.maxDistance !== 'undefined' ? o.maxDistance : pa.maxDistance,
+					refDistance: typeof o.refDistance !== 'undefined' ? o.refDistance : pa.refDistance,
+					rolloffFactor: typeof o.rolloffFactor !== 'undefined' ? o.rolloffFactor : pa.rolloffFactor,
+					panningModel: typeof o.panningModel !== 'undefined' ? o.panningModel : pa.panningModel
+				};
+
+				// Update the panner values or create a new panner if none exists.
+				const panner = sound._panner;
+				if (panner) {
+					panner.coneInnerAngle = pa.coneInnerAngle;
+					panner.coneOuterAngle = pa.coneOuterAngle;
+					panner.coneOuterGain = pa.coneOuterGain;
+					panner.distanceModel = pa.distanceModel;
+					panner.maxDistance = pa.maxDistance;
+					panner.refDistance = pa.refDistance;
+					panner.rolloffFactor = pa.rolloffFactor;
+					panner.panningModel = pa.panningModel;
+				} else {
+					// Make sure we have a position to setup the node with.
+					if (!sound._pos) {
+						sound._pos = this._pos || [0, 0, -0.5];
+					}
+
+					// Create a new panner node.
+					setupPanner(sound, 'spatial');
+				}
 			}
 		}
 

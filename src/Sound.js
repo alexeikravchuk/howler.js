@@ -17,6 +17,12 @@ export class Sound {
 	init() {
 		const parent = this._parent;
 
+		// Setup user-defined default properties.
+		this._orientation = parent._orientation;
+		this._stereo = parent._stereo;
+		this._pos = parent._pos;
+		this._pannerAttr = parent._pannerAttr;
+
 		// Setup the default parameters.
 		this._muted = parent._muted;
 		this._loop = parent._loop;
@@ -35,6 +41,13 @@ export class Sound {
 
 		// Create the new node.
 		this.create();
+
+		// If a stereo or position was specified, set it up.
+		if (this._stereo) {
+			parent.stereo(this._stereo);
+		} else if (this._pos) {
+			parent.pos(this._pos[0], this._pos[1], this._pos[2], this._id);
+		}
 
 		return this;
 	}
@@ -90,6 +103,24 @@ export class Sound {
 	 */
 	reset() {
 		const parent = this._parent;
+
+		// Reset all spatial plugin properties on this sound.
+		this._orientation = parent._orientation;
+		this._stereo = parent._stereo;
+		this._pos = parent._pos;
+		this._pannerAttr = parent._pannerAttr;
+
+		// If a stereo or position was specified, set it up.
+		if (this._stereo) {
+			parent.stereo(this._stereo);
+		} else if (this._pos) {
+			parent.pos(this._pos[0], this._pos[1], this._pos[2], this._id);
+		} else if (this._panner) {
+			// Disconnect the panner.
+			this._panner.disconnect(0);
+			this._panner = undefined;
+			parent._refreshBuffer(this);
+		}
 
 		// Reset all of the parameters of this sound.
 		this._muted = parent._muted;
