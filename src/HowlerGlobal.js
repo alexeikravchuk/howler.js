@@ -55,7 +55,7 @@ export class HowlerGlobal {
 
 		// If we don't have an AudioContext created yet, run the setup.
 		if (!this.ctx) {
-			setupAudioContext();
+			setupAudioContext(this);
 		}
 
 		if (typeof vol !== 'undefined' && vol >= 0 && vol <= 1) {
@@ -101,7 +101,7 @@ export class HowlerGlobal {
 	mute(muted) {
 		// If we don't have an AudioContext created yet, run the setup.
 		if (!this.ctx) {
-			setupAudioContext();
+			setupAudioContext(this);
 		}
 
 		this._muted = muted;
@@ -156,7 +156,7 @@ export class HowlerGlobal {
 		if (this.usingWebAudio && this.ctx && typeof this.ctx.close !== 'undefined') {
 			this.ctx.close();
 			this.ctx = null;
-			setupAudioContext();
+			setupAudioContext(this);
 		}
 
 		return this;
@@ -164,11 +164,11 @@ export class HowlerGlobal {
 
 	/**
 	 * Check for codec support of specific extension.
-	 * @param  {String} ext Audio file extention.
+	 * @param  {String} ext Audio file extension.
 	 * @return {Boolean}
 	 */
 	codecs(ext) {
-		return (this || Howler)._codecs[ext.replace(/^x-/, '')];
+		return this._codecs[ext.replace(/^x-/, '')];
 	}
 
 	/**
@@ -176,6 +176,7 @@ export class HowlerGlobal {
 	 * @return {HowlerGlobal}
 	 */
 	_setup() {
+		let test;
 		// Keeps track of the suspend/resume state of the AudioContext.
 		this.state = this.ctx ? this.ctx.state || 'suspended' : 'suspended';
 
@@ -187,7 +188,7 @@ export class HowlerGlobal {
 			// No audio is available on this system if noAudio is set to true.
 			if (typeof Audio !== 'undefined') {
 				try {
-					var test = new Audio();
+					test = new Audio();
 
 					// Check if the canplaythrough event is available.
 					if (typeof test.oncanplaythrough === 'undefined') {
@@ -203,7 +204,7 @@ export class HowlerGlobal {
 
 		// Test to make sure audio isn't disabled in Internet Explorer.
 		try {
-			var test = new Audio();
+			test = new Audio();
 			if (test.muted) {
 				this.noAudio = true;
 			}
@@ -339,7 +340,7 @@ export class HowlerGlobal {
 			this._autoResume();
 
 			// Create an empty buffer.
-			var source = this.ctx.createBufferSource();
+			const source = this.ctx.createBufferSource();
 			source.buffer = this._scratchBuffer;
 			source.connect(this.ctx.destination);
 
@@ -476,32 +477,35 @@ export class HowlerGlobal {
 	 * @return {HowlerGlobal}
 	 */
 	_autoResume() {
-		if (!this.ctx || typeof this.ctx.resume === 'undefined' || !Howler.usingWebAudio) {
-			return;
-		}
+		if (this.ctx && this.ctx.resume && Howler.usingWebAudio) {
 
-		if (this.state === 'running' && this.ctx.state !== 'interrupted' && this._suspendTimer) {
-			clearTimeout(this._suspendTimer);
-			this._suspendTimer = null;
-		} else if (this.state === 'suspended' || this.state === 'running' && this.ctx.state === 'interrupted') {
-			this.ctx.resume().then(() => {
-				this.state = 'running';
-
-				// Emit to all Howls that the audio has resumed.
-				for (let i = 0; i < this._howls.length; i++) {
-					this._howls[i]._emit('resume');
-				}
-			});
-
-			if (this._suspendTimer) {
+			if (this.state === 'running' && this.ctx.state !== 'interrupted' && this._suspendTimer) {
 				clearTimeout(this._suspendTimer);
 				this._suspendTimer = null;
 			}
-		} else if (this.state === 'suspending') {
-			this._resumeAfterSuspend = true;
-		}
 
-		return this;
+			else if (this.state === 'suspended' || this.state === 'running' && this.ctx.state === 'interrupted') {
+				this.ctx.resume().then(() => {
+					this.state = 'running';
+
+					// Emit to all Howls that the audio has resumed.
+					for (let i = 0; i < this._howls.length; i++) {
+						this._howls[i]._emit('resume');
+					}
+				});
+
+				if (this._suspendTimer) {
+					clearTimeout(this._suspendTimer);
+					this._suspendTimer = null;
+				}
+			}
+
+			else if (this.state === 'suspending') {
+				this._resumeAfterSuspend = true;
+			}
+
+			return this;
+		}
 	}
 }
 

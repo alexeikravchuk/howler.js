@@ -4,7 +4,6 @@ import { Howler } from './HowlerGlobal';
  * Setup the sound object, which each node attached to a Howl group is contained in.
  * @param {Object} howl The Howl parent group.
  */
-
 export class Sound {
 	constructor(howl) {
 		this._parent = howl;

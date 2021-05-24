@@ -12,7 +12,7 @@ export function loadBuffer(howl) {
 	// Check if the buffer has already been cached and use it instead.
 	if (cache[url]) {
 		// Set the duration from the cache.
-		this._duration = cache[url].duration;
+		howl._duration = cache[url].duration;
 
 		// Load the sound into this Howl.
 		return loadSound(howl);
@@ -66,7 +66,7 @@ function decodeAudioData(arraybuffer, howl) {
  * @param  {Howl} howl
  * @param  {Object} buffer The decoded buffer sound source.
  */
-function loadSound(howl, buffer= null) {
+function loadSound(howl, buffer = null) {
 	// Set the duration.
 	if (buffer && !howl._duration) {
 		howl._duration = buffer.duration;

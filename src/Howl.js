@@ -81,7 +81,7 @@ export class Howl {
 		} = o;
 
 		// If we don't have an AudioContext created yet, run the setup.
-		!Howler.ctx && setupAudioContext();
+		!Howler.ctx && setupAudioContext(Howler);
 
 		// Setup user-defined default properties.
 		this._autoplay = autoplay;
@@ -384,14 +384,14 @@ export class Howl {
 				this._playLock = true;
 
 				// Wait for the audio context to resume before playing.
-				this.once('resume', () => playWebAudio());
+				this.once('resume', playWebAudio);
 
 				// Cancel the end timer.
 				this._clearTimer(sound._id);
 			}
 		} else {
 			// Fire this when the sound is ready to play to begin HTML5 Audio playback.
-			var playHtml5 = () => {
+			const playHtml5 = () => {
 				node.currentTime = seek;
 				node.muted = sound._muted || this._muted || Howler._muted || node.muted;
 				node.volume = sound._volume * Howler.volume();
@@ -399,7 +399,7 @@ export class Howl {
 
 				// Some browsers will throw an error if this is called without user interaction.
 				try {
-					var play = node.play();
+					const play = node.play();
 
 					// Support older browsers that don't support promises, and thus don't have this issue.
 					if (play && typeof Promise !== 'undefined' && (play instanceof Promise || typeof play.then === 'function')) {
@@ -470,13 +470,13 @@ export class Howl {
 			}
 
 			// Play immediately if ready, or wait for the 'canplaythrough'e vent.
-			var loadedNoReadyState = (window && window.ejecta) || (!node.readyState && Howler._navigator.isCocoonJS);
+			const loadedNoReadyState = (window && window.ejecta) || (!node.readyState && Howler._navigator.isCocoonJS);
 			if (node.readyState >= 3 || loadedNoReadyState) {
 				playHtml5();
 			} else {
 				this._playLock = true;
 
-				var listener = () => {
+				const listener = () => {
 					// Begin playback.
 					playHtml5();
 
@@ -510,14 +510,14 @@ export class Howl {
 		}
 
 		// If no id is passed, get all ID's to be paused.
-		var ids = this._getSoundIds(id);
+		const ids = this._getSoundIds(id);
 
-		for (var i = 0; i < ids.length; i++) {
+		for (let i = 0; i < ids.length; i++) {
 			// Clear the end timer.
 			this._clearTimer(ids[i]);
 
 			// Get the sound.
-			var sound = this._soundById(ids[i]);
+			const sound = this._soundById(ids[i]);
 
 			if (sound && !sound._paused) {
 				// Reset the seek position.
@@ -576,14 +576,14 @@ export class Howl {
 		}
 
 		// If no id is passed, get all ID's to be stopped.
-		var ids = this._getSoundIds(id);
+		const ids = this._getSoundIds(id);
 
-		for (var i = 0; i < ids.length; i++) {
+		for (let i = 0; i < ids.length; i++) {
 			// Clear the end timer.
 			this._clearTimer(ids[i]);
 
 			// Get the sound.
-			var sound = this._soundById(ids[i]);
+			const sound = this._soundById(ids[i]);
 
 			if (sound) {
 				// Reset the seek position.
@@ -702,7 +702,7 @@ export class Howl {
 		} else if (args.length === 1 || args.length === 2 && typeof args[1] === 'undefined') {
 			// First check if this is an ID, and if not, assume it is a new volume.
 			const ids = this._getSoundIds();
-			var index = ids.indexOf(args[0]);
+			const index = ids.indexOf(args[0]);
 			if (index >= 0) {
 				id = parseInt(args[0], 10);
 			} else {
@@ -714,7 +714,7 @@ export class Howl {
 		}
 
 		// Update the volume or return the current volume.
-		var sound;
+		let sound;
 		if (typeof vol !== 'undefined' && vol >= 0 && vol <= 1) {
 			// If the sound hasn't loaded, add it to the load queue to change volume when capable.
 			if (this._state !== 'loaded' || this._playLock) {
@@ -733,7 +733,7 @@ export class Howl {
 
 			// Update one or all volumes.
 			id = this._getSoundIds(id);
-			for (var i = 0; i < id.length; i++) {
+			for (let i = 0; i < id.length; i++) {
 				// Get the sound.
 				sound = this._soundById(id[i]);
 
@@ -790,10 +790,10 @@ export class Howl {
 		this.volume(from, id);
 
 		// Fade the volume of one or all sounds.
-		var ids = this._getSoundIds(id);
-		for (var i = 0; i < ids.length; i++) {
+		const ids = this._getSoundIds(id);
+		for (let i = 0; i < ids.length; i++) {
 			// Get the sound.
-			var sound = this._soundById(ids[i]);
+			const sound = this._soundById(ids[i]);
 
 			// Create a linear fade or fall back to timeouts with HTML5 Audio.
 			if (sound) {
@@ -804,8 +804,8 @@ export class Howl {
 
 				// If we are using Web Audio, let the native methods do the actual fade.
 				if (this._webAudio && !sound._muted) {
-					var currentTime = Howler.ctx.currentTime;
-					var end = currentTime + (len / 1000);
+					const currentTime = Howler.ctx.currentTime;
+					const end = currentTime + (len / 1000);
 					sound._volume = from;
 					sound._node.gain.setValueAtTime(from, currentTime);
 					sound._node.gain.linearRampToValueAtTime(to, end);
@@ -840,7 +840,7 @@ export class Howl {
 		// Update the volume value on each interval tick.
 		sound._interval = setInterval(() => {
 			// Update the volume based on the time since the last tick.
-			var tick = (Date.now() - lastTick) / len;
+			const tick = (Date.now() - lastTick) / len;
 			lastTick = Date.now();
 			vol += diff * tick;
 
@@ -976,8 +976,8 @@ export class Howl {
 			id = this._sounds[0]._id;
 		} else if (args.length === 1) {
 			// First check if this is an ID, and if not, assume it is a new rate value.
-			var ids = this._getSoundIds();
-			var index = ids.indexOf(args[0]);
+			const ids = this._getSoundIds();
+			const index = ids.indexOf(args[0]);
 			if (index >= 0) {
 				id = parseInt(args[0], 10);
 			} else {
@@ -1099,12 +1099,12 @@ export class Howl {
 		}
 
 		// Get the sound.
-		var sound = this._soundById(id);
+		const sound = this._soundById(id);
 
 		if (sound) {
 			if (typeof seek === 'number' && seek >= 0) {
 				// Pause the sound and update position for restarting playback.
-				var playing = this.playing(id);
+				const playing = this.playing(id);
 				if (playing) {
 					this.pause(id, true);
 				}
@@ -1120,7 +1120,7 @@ export class Howl {
 				}
 
 				// Seek and emit when ready.
-				var seekAndEmit = () => {
+				const seekAndEmit = () => {
 					this._emit('seek', id);
 
 					// Restart the playback if the sound was playing.
@@ -1275,9 +1275,8 @@ export class Howl {
 	 * @return {Howl}
 	 */
 	on(event, fn, id, once) {
-		const events = this['_on' + event];
+		const events = this[`_on${ event }`];
 
-		debugger;
 		if (typeof fn === 'function') {
 			events.push(once ?
 				{
@@ -1302,7 +1301,7 @@ export class Howl {
 	 * @return {Howl}
 	 */
 	off(event, fn, id) {
-		const events = this['_on' + event];
+		const events = this[`_on${ event }`];
 		let i = 0;
 
 		// Allow passing just an event and ID.
@@ -1314,7 +1313,7 @@ export class Howl {
 		if (fn || id) {
 			// Loop through event store and remove the passed function.
 			for (i = 0; i < events.length; i++) {
-				var isId = (id === events[i].id);
+				const isId = (id === events[i].id);
 				if (fn === events[i].fn && isId || !fn && isId) {
 					events.splice(i, 1);
 					break;
@@ -1358,18 +1357,15 @@ export class Howl {
 	 * @return {Howl}
 	 */
 	_emit(event, id, msg) {
-		const events = this['_on' + event];
+		const events = this[`_on${ event }`];
 
 		// Loop through event store and fire all functions.
 		for (let i = events.length - 1; i >= 0; i--) {
 			// Only fire the listener if the correct ID is used.
 			if (!events[i].id || events[i].id === id || event === 'load') {
+				const { fn } = events[i];
 				setTimeout(
-					() => {
-						console.log(events[i]);
-						events[i] && events[i].fn.call(this, id, msg)
-					},
-
+					() => fn.call(this, id, msg),
 					0
 				);
 
